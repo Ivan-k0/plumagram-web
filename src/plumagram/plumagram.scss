@@ -299,6 +299,21 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
   }
 }
 
+.pg-storage-folder {
+  color: #fff;
+  background: var(--folder-color);
+
+  &:hover,
+  &:focus-visible {
+    background: var(--folder-color);
+    filter: brightness(1.12);
+  }
+}
+
+.pg-storage-add {
+  color: var(--secondary-text-color);
+}
+
 @keyframes pg-fade-in {
   from { opacity: 0; }
 }

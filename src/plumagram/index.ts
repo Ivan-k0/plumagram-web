@@ -9,7 +9,7 @@ import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, tog
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
-import {openStorage, tagHoveredSavedMessage} from '@/plumagram/storage';
+import {openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import '@/plumagram/plumagram.scss';
 
@@ -296,6 +296,13 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'tag hashtag метка хэштег хранилище',
   hotkey: `${ALT}3`,
   run: tagHoveredSavedMessage
+}, {
+  id: 'toFolder',
+  onMessage: true,
+  title: () => pt('В папку Хранилища…', 'To a storage folder…'),
+  keywords: 'folder папка хранилище положить',
+  hotkey: `${ALT}4`,
+  run: putHoveredIntoFolder
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
@@ -625,6 +632,7 @@ function onKeyDown(e: KeyboardEvent) {
 const APP_HOTKEYS: {[code: string]: () => void} = {
   KeyB: openStorage,
   Digit3: tagHoveredSavedMessage,
+  Digit4: putHoveredIntoFolder,
   KeyX: hideSimilarToHovered,
   KeyJ: jumpToLastNotification,
   KeyA: switchToNextAccount,

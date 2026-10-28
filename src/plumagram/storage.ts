@@ -11,6 +11,7 @@ import {pt} from '@/plumagram/settings';
 import {getTargetBubble} from '@/plumagram/target';
 import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import type {Message} from '@layer';
+import {addToFolder, CloudFolder, createFolder, folderColor, fromTdId, loadCloudStorage} from '@/plumagram/storageCloud';
 
 const TAG_REGEXP = /#([\p{L}\p{N}_]{1,64})/gu;
 const HISTORY_PAGES = 10, PAGE_SIZE = 100;
@@ -87,13 +88,47 @@ export function openStorage() {
   const hint = document.createElement('div');
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
-    'Метка — #слово в тексте своего сообщения в Избранном: её видно и в приложении. Поставить: наведи мышь на своё сообщение в Избранном и нажми ⌥/Alt+3 (#).',
-    'A tag is a #word in the text of your own message in Saved Messages, seen in the app too. Point at your message there and press ⌥/Alt+3 (#).'
+    'Папки и метки видно и в приложении. В папку: наведи мышь на сообщение в Избранном — ⌥/Alt+4. Метка (#слово в тексте своего сообщения) — ⌥/Alt+3.',
+    'Folders and tags are seen in the app too. To a folder: point at a message in Saved Messages — ⌥/Alt+4. A tag (#word in your own message) — ⌥/Alt+3.'
   );
 
-  panel.append(title, input, caption, tagsBox, hint);
+  const foldersCaption = document.createElement('div');
+  foldersCaption.className = 'pg-settings-row-sub pg-storage-caption';
+  foldersCaption.textContent = pt('Папки', 'Folders');
+
+  const foldersBox = document.createElement('div');
+  foldersBox.className = 'pg-storage-tags';
+  foldersBox.textContent = pt('Загружаю папки…', 'Loading the folders…');
+
+  panel.append(title, input, foldersCaption, foldersBox, caption, tagsBox, hint);
   createOverlay(panel);
   focusSoon(input);
+
+  loadCloudStorage(true).then((data) => {
+    if(!foldersBox.isConnected) return;
+    const chips = data.folders.map((folder) => {
+      const chip = document.createElement('button');
+      chip.className = 'pg-storage-tag pg-storage-folder';
+      chip.style.setProperty('--folder-color', folderColor(folder));
+      chip.textContent = folder.name;
+      const counter = document.createElement('span');
+      counter.textContent = '' + folder.ids.length;
+      chip.append(counter);
+      chip.addEventListener('click', () => openFolder(folder));
+      return chip;
+    });
+    const add = document.createElement('button');
+    add.className = 'pg-storage-tag pg-storage-add';
+    add.textContent = pt('+ Новая папка', '+ New folder');
+    add.addEventListener('click', () => askName(pt('Новая папка', 'New folder'), async(name) => {
+      await createFolder(name);
+      toast(pt(`Папка «${name}» создана`, `Folder «${name}» created`));
+      openStorage();
+    }));
+    foldersBox.replaceChildren(...chips, add);
+  }, () => {
+    foldersBox.textContent = pt('Не удалось загрузить папки', 'Could not load the folders');
+  });
 
   collectTags().then((tags) => {
     if(!tagsBox.isConnected) return;
@@ -155,6 +190,115 @@ export async function tagHoveredSavedMessage() {
   const anchor = bubble.querySelector<HTMLElement>('.bubble-content') || bubble;
   options.push({text: pt('Новая метка…', 'New tag…'), run: () => askNewTag(put, anchor)});
   openChoicePicker(pt('Поставить метку', 'Add a tag'), options, anchor);
+}
+
+/** A folder's records: the first words of each, a click shows it in Saved Messages */
+async function openFolder(folder: CloudFolder) {
+  const panel = document.createElement('div');
+  panel.className = 'pg-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.tabIndex = -1;
+
+  const list = document.createElement('div');
+  list.className = 'pg-list';
+  list.textContent = pt('Загружаю…', 'Loading…');
+
+  panel.append(makeTitle(`${folder.name} · ${folder.ids.length}`), list);
+  createOverlay(panel);
+  focusSoon(panel);
+
+  const mids = folder.ids.map(fromTdId).filter(Boolean).slice(-100);
+  if(!mids.length) {
+    list.textContent = pt('Папка пуста. Положить: наведи мышь на сообщение в Избранном и нажми ⌥/Alt+4.', 'The folder is empty. Point at a message in Saved Messages and press ⌥/Alt+4.');
+    return;
+  }
+
+  const managers = bindManagersToSession(rootScope.managers);
+  const result = await managers.apiManager.invokeApi('messages.getMessages', {
+    id: mids.map((id) => ({_: 'inputMessageID' as const, id}))
+  }) as any;
+  const messages = ((result.messages || []) as Message.message[]).filter((m) => m._ === 'message').sort((a, b) => b.id - a.id);
+  if(!list.isConnected) return;
+
+  list.replaceChildren(...messages.map((message) => {
+    const item = document.createElement('div');
+    item.className = 'pg-item';
+    item.tabIndex = 0;
+    const label = document.createElement('span');
+    label.className = 'pg-item-title';
+    const text = (message.message || '').replace(/\s+/g, ' ').trim();
+    label.textContent = text ? (text.length > 70 ? text.slice(0, 70) + '…' : text) : describeMedia(message);
+    const date = document.createElement('span');
+    date.className = 'pg-item-target';
+    date.textContent = new Date(message.date * 1000).toLocaleDateString();
+    item.append(label, date);
+    item.addEventListener('click', async() => {
+      closeOverlay();
+      const {default: appImManager} = await import('@lib/appImManager');
+      appImManager.setPeer({peerId: appImManager.myId, lastMsgId: message.id});
+    });
+    return item;
+  }));
+  if(!messages.length) list.textContent = pt('Записи этой папки удалены из Избранного', 'The records of this folder were deleted from Saved Messages');
+}
+
+function describeMedia(message: Message.message) {
+  const media = message.media as any;
+  if(!media) return pt('Сообщение', 'Message');
+  if(media._ === 'messageMediaPhoto') return pt('Фото', 'Photo');
+  if(media._ === 'messageMediaWebPage') return pt('Ссылка', 'Link');
+  const document = media.document;
+  const name = document?.attributes?.find((a: any) => a._ === 'documentAttributeFilename')?.file_name;
+  if(document?.attributes?.some((a: any) => a._ === 'documentAttributeAudio' && a.pFlags?.voice)) return pt('Голосовое', 'Voice message');
+  if(document?.attributes?.some((a: any) => a._ === 'documentAttributeVideo')) return pt('Видео', 'Video');
+  return name || pt('Файл', 'File');
+}
+
+/** «В папку…»: the message under the pointer (in Saved Messages) into a folder of the storage */
+export async function putHoveredIntoFolder() {
+  const bubble = getTargetBubble();
+  const {default: appImManager} = await import('@lib/appImManager');
+  const chat = appImManager.chat;
+  if(!bubble || chat?.peerId !== appImManager.myId) {
+    toast(pt('Наведи мышь на сообщение в Избранном', 'Point at a message in Saved Messages'));
+    return;
+  }
+
+  const mids = await chat.getMidsByMid(chat.peerId, +bubble.dataset.mid);
+  const anchor = bubble.querySelector<HTMLElement>('.bubble-content') || bubble;
+  const data = await loadCloudStorage(true);
+  const put = (folderId: number, name: string) => async() => {
+    const added = await addToFolder(folderId, mids);
+    toast(added ?
+      pt(`Положено в «${name}»`, `Put into «${name}»`) :
+      pt(`Уже лежит в «${name}»`, `Already in «${name}»`));
+  };
+
+  const options: ChoiceOption[] = data.folders.map((folder) => ({text: folder.name, run: put(folder.id, folder.name)}));
+  options.push({text: pt('Новая папка…', 'New folder…'), run: () => askName(pt('Новая папка', 'New folder'), async(name) => {
+    const folder = await createFolder(name);
+    await put(folder.id, folder.name)();
+  }, anchor)});
+  openChoicePicker(pt('В папку', 'To a folder'), options, anchor);
+}
+
+/** A one-line question for a name: Enter gives it */
+function askName(placeholder: string, done: (name: string) => void, anchor?: HTMLElement) {
+  const panel = document.createElement('div');
+  panel.className = 'pg-panel';
+  const input = document.createElement('input');
+  input.className = 'pg-palette-input';
+  input.placeholder = placeholder + pt(', Enter — готово', ', Enter to finish');
+  input.addEventListener('keydown', (e) => {
+    if(e.key !== 'Enter' || !input.value.trim()) return;
+    e.preventDefault();
+    const name = input.value.trim();
+    closeOverlay();
+    done(name);
+  });
+  panel.append(input);
+  createOverlay(panel, anchor);
+  focusSoon(input);
 }
 
 function askNewTag(put: (tag: string) => () => Promise<void>, anchor: HTMLElement) {
