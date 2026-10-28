@@ -9,7 +9,7 @@ import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, tog
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
-import {openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
+import {initServiceFileLine, openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import '@/plumagram/plumagram.scss';
 
@@ -244,7 +244,7 @@ const ACTIONS: PaletteAction[] = [{
   id: 'filters',
   title: () => pt('Фильтры сообщений', 'Message filters'),
   keywords: 'filter filters rules фильтры правила скрытые',
-  run: openFiltersManager
+  run: () => openFiltersManager()
 }, {
   id: 'pin',
   onMessage: true,
@@ -479,8 +479,8 @@ function openHotkeysList() {
     [pt('Картинка в картинке', 'Picture in picture'), 'P']
   ]);
 
-  panel.append(makeTitle(pt('Горячие клавиши', 'Keyboard shortcuts')), list);
-  createOverlay(panel);
+  panel.append(makeTitle(pt('Горячие клавиши', 'Keyboard shortcuts'), true, openPlumaSettings), list);
+  createOverlay(panel, undefined, openPlumaSettings);
   focusSoon(panel);
 }
 
@@ -538,7 +538,7 @@ export function openPlumaSettings() {
   filtersRow.tabIndex = 0;
   filtersRow.setAttribute('role', 'button');
   filtersRow.textContent = pt('Фильтры сообщений…', 'Message filters…');
-  filtersRow.addEventListener('click', openFiltersManager);
+  filtersRow.addEventListener('click', () => openFiltersManager(openPlumaSettings));
 
   const hotkeysRow = document.createElement('div');
   hotkeysRow.className = 'pg-settings-row';
@@ -652,6 +652,7 @@ export default function initPlumaGram() {
   window.addEventListener('keydown', onKeyDown, {capture: true});
   initMessageTarget();
   initFilters();
+  initServiceFileLine();
 
   createRoot(() => {
     createEffect(() => {

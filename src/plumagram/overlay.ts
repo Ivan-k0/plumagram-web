@@ -53,7 +53,8 @@ function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLEleme
   }
 }
 
-export function createOverlay(panel: HTMLElement, anchor?: HTMLElement) {
+/** `onBack`: this window was opened from another one — Esc, «back» and the arrow return there */
+export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?: () => void) {
   closeOverlay();
   const overlay = document.createElement('div');
   overlay.className = 'pg-overlay';
@@ -66,6 +67,7 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement) {
       e.preventDefault();
       e.stopPropagation();
       closeOverlay();
+      onBack?.();
     }
   });
   document.body.append(overlay);
@@ -95,6 +97,8 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement) {
     onPop: () => {
       overlayNavigationItem = undefined;
       closeOverlay();
+      // * the window before is opened after the app has finished going back, or that same «back» closed it
+      onBack && setTimeout(onBack, 0);
     }
   });
   return overlay;
@@ -112,10 +116,22 @@ export function focusSoon(element: HTMLElement) {
 }
 
 /** The title of our window, with a close button on the right as in the app's own popups */
-export function makeTitle(text: string, closable = true) {
+export function makeTitle(text: string, closable = true, onBack?: () => void) {
   const title = document.createElement('div');
   title.className = 'pg-settings-title';
+  if(onBack) {
+    const back = document.createElement('button');
+    back.className = 'pg-close pg-back';
+    back.setAttribute('aria-label', 'Back');
+    back.append(Icon('left'));
+    back.addEventListener('click', () => {
+      closeOverlay();
+      onBack();
+    });
+    title.append(back);
+  }
   const label = document.createElement('span');
+  label.className = 'pg-title-text';
   label.textContent = text;
   title.append(label);
   if(closable) {

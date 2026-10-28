@@ -200,12 +200,12 @@ export async function hideSimilarToHovered() {
 }
 
 /** The list of rules: remove one, or add a new one by text */
-export function openFiltersManager() {
+export function openFiltersManager(onBack?: () => void) {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
 
-  const title = makeTitle(pt('Фильтры сообщений', 'Message filters'));
+  const title = makeTitle(pt('Фильтры сообщений', 'Message filters'), true, onBack);
 
   const input = document.createElement('input');
   input.className = 'pg-palette-input';
@@ -252,6 +252,6 @@ export function openFiltersManager() {
 
   render();
   panel.append(title, input, list);
-  createOverlay(panel);
+  createOverlay(panel, undefined, onBack);
   focusSoon(input);
 }

@@ -36,6 +36,12 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
   }
 }
 
+.bubble.pg-service-file {
+  > *:not(.pg-service-line) {
+    display: none !important;
+  }
+}
+
 .bubble.pg-filtered-fully {
   display: none !important;
 }
@@ -201,6 +207,14 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
     outline: none;
     background: var(--light-secondary-text-color);
   }
+}
+
+.pg-back {
+  margin: -6px 0 -6px -8px;
+}
+
+.pg-title-text {
+  flex: 1;
 }
 
 .pg-settings-row {

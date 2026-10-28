@@ -11,7 +11,7 @@ import {pt} from '@/plumagram/settings';
 import {getTargetBubble} from '@/plumagram/target';
 import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import type {Message} from '@layer';
-import {addToFolder, CloudFolder, createFolder, folderColor, fromTdId, loadCloudStorage} from '@/plumagram/storageCloud';
+import {addToFolder, CloudFolder, createFolder, folderColor, fromTdId, loadCloudStorage, STORAGE_FILE_NAME} from '@/plumagram/storageCloud';
 
 const TAG_REGEXP = /#([\p{L}\p{N}_]{1,64})/gu;
 const HISTORY_PAGES = 10, PAGE_SIZE = 100;
@@ -203,8 +203,8 @@ async function openFolder(folder: CloudFolder) {
   list.className = 'pg-list';
   list.textContent = pt('Загружаю…', 'Loading…');
 
-  panel.append(makeTitle(`${folder.name} · ${folder.ids.length}`), list);
-  createOverlay(panel);
+  panel.append(makeTitle(`${folder.name} · ${folder.ids.length}`, true, openStorage), list);
+  createOverlay(panel, undefined, openStorage);
   focusSoon(panel);
 
   const mids = folder.ids.map(fromTdId).filter(Boolean).slice(-100);
@@ -317,4 +317,37 @@ function askNewTag(put: (tag: string) => () => Promise<void>, anchor: HTMLElemen
   panel.append(input);
   createOverlay(panel, anchor);
   focusSoon(input);
+}
+
+/**
+ * The service file in Saved Messages is not a record: its bubble is a small grey line «Служебный файл
+ * PlumaGram — папки Хранилища» (a click opens the storage), not a JSON document someone wonders about.
+ */
+export function initServiceFileLine() {
+  const apply = (bubble: HTMLElement) => {
+    if(bubble.classList.contains('pg-service-file')) return;
+    const name = bubble.querySelector('.document-name')?.textContent || '';
+    if(!name.includes(STORAGE_FILE_NAME.replace('.json', ''))) return;
+    bubble.classList.add('pg-service-file');
+    const line = document.createElement('div');
+    line.className = 'pg-filter-strip pg-service-line';
+    line.textContent = pt('Служебный файл PlumaGram — папки Хранилища', 'PlumaGram service file — storage folders');
+    line.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openStorage();
+    });
+    bubble.prepend(line);
+  };
+
+  new MutationObserver((mutations) => {
+    for(const mutation of mutations) {
+      mutation.addedNodes.forEach((node) => {
+        if(!(node instanceof HTMLElement)) return;
+        const bubble = node.closest?.<HTMLElement>('.bubbles-inner .bubble[data-mid]');
+        if(bubble) apply(bubble);
+        node.querySelectorAll?.<HTMLElement>('.bubbles-inner .bubble[data-mid]').forEach(apply);
+      });
+    }
+  }).observe(document.body, {childList: true, subtree: true});
+  document.querySelectorAll<HTMLElement>('.bubbles-inner .bubble[data-mid]').forEach(apply);
 }
