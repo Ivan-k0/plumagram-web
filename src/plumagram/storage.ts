@@ -339,15 +339,32 @@ export function initServiceFileLine() {
     bubble.prepend(line);
   };
 
+  // * the chat list too: under «Saved Messages» not «PlumaGram-Хранилище.json, Служебный файл…» but a plain line
+  const fileName = STORAGE_FILE_NAME;
+  const applyPreview = (span: HTMLElement) => {
+    if(!span.textContent.includes(fileName) || span.dataset.pgService) return;
+    span.dataset.pgService = '1';
+    span.textContent = pt('Папки Хранилища обновлены', 'Storage folders updated');
+  };
+
   new MutationObserver((mutations) => {
     for(const mutation of mutations) {
+      const target = mutation.target as HTMLElement;
+      const preview = target.closest?.<HTMLElement>('.dialog-subtitle-span-last');
+      if(preview) {
+        delete preview.dataset.pgService;
+        applyPreview(preview);
+      }
       mutation.addedNodes.forEach((node) => {
         if(!(node instanceof HTMLElement)) return;
         const bubble = node.closest?.<HTMLElement>('.bubbles-inner .bubble[data-mid]');
         if(bubble) apply(bubble);
         node.querySelectorAll?.<HTMLElement>('.bubbles-inner .bubble[data-mid]').forEach(apply);
+        if(node.matches('.dialog-subtitle-span-last')) applyPreview(node);
+        node.querySelectorAll?.<HTMLElement>('.dialog-subtitle-span-last').forEach(applyPreview);
       });
     }
   }).observe(document.body, {childList: true, subtree: true});
   document.querySelectorAll<HTMLElement>('.bubbles-inner .bubble[data-mid]').forEach(apply);
+  document.querySelectorAll<HTMLElement>('.dialog-subtitle-span-last').forEach(applyPreview);
 }
