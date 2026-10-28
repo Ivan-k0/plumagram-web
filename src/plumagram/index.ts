@@ -662,4 +662,5 @@ export default function initPlumaGram() {
   });
 
   (window as any).plumagram = {openCommandPalette, openPlumaSettings, settings: plumaSettings};
+  import('@/plumagram/storageCloud').then(({storageChecks}) => (window as any).plumagram.storageChecks = storageChecks);
 }

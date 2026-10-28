@@ -13,6 +13,7 @@
 import rootScope from '@lib/rootScope';
 import {bindManagersToSession} from '@lib/accounts/bindManagersToAccount';
 import type {Document, Message} from '@layer';
+import {pt} from '@/plumagram/settings';
 
 export const STORAGE_FILE_NAME = 'PlumaGram-Хранилище.json';
 const CAPTION = 'Служебный файл PlumaGram: папки Хранилища для приложения и веб-версии. Не удаляйте.';
@@ -58,9 +59,76 @@ function empty(): CloudStorage {
 
 let cached: {data: CloudStorage, mid?: number};
 
+const MAX_FILE_SIZE = 512 * 1024, MAX_FOLDERS = 500, MAX_IDS = 10000, MAX_NAME = 64;
+
+/**
+ * Only our own file in Saved Messages: never a forwarded one — a file someone sent and that was forwarded here
+ * would put their folders (and a «share» target) in place of yours
+ */
 function isStorageDocument(message: Message.message) {
-  const document = (message?.media as any)?.document as Document.document;
-  return !!document?.attributes?.some((attribute) => attribute._ === 'documentAttributeFilename' && attribute.file_name === STORAGE_FILE_NAME);
+  if(!message || message.fwd_from) return false;
+  const document = (message.media as any)?.document as Document.document;
+  return !!document?.attributes?.some((attribute) => attribute._ === 'documentAttributeFilename' && attribute.file_name === STORAGE_FILE_NAME) &&
+    +document.size <= MAX_FILE_SIZE;
+}
+
+const isId = (value: any) => typeof value === 'number' && Number.isSafeInteger(value);
+
+/** The file's data if it is sound, else nothing: a broken or oversized file is never taken in */
+function validate(parsed: any): CloudStorage {
+  if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+  const folders = parsed.folders ?? [];
+  const tags = parsed.tags ?? {};
+  if(!Array.isArray(folders) || folders.length > MAX_FOLDERS || typeof tags !== 'object' || Array.isArray(tags)) return;
+  for(const folder of folders) {
+    if(!folder || typeof folder !== 'object' || !isId(folder.id) || typeof folder.name !== 'string' ||
+      !Array.isArray(folder.ids) || folder.ids.length > MAX_IDS || !folder.ids.every(isId)) return;
+    folder.name = folder.name.slice(0, MAX_NAME);
+    if(!isId(folder.color)) folder.color = 0;
+  }
+  for(const tag in tags) {
+    if(!Array.isArray(tags[tag]) || tags[tag].length > MAX_IDS || !tags[tag].every(isId)) return;
+  }
+  if(parsed.homeTags !== undefined && !(Array.isArray(parsed.homeTags) && parsed.homeTags.every((t: any) => typeof t === 'string'))) return;
+  return {...empty(), ...parsed, folders, tags, next: isId(parsed.next) ? parsed.next : 1, updated: isId(parsed.updated) ? parsed.updated : 0};
+}
+
+// * a copy in this browser: the file is made again from it when it was deleted, and taken when the cloud one is broken
+function copyKey() {
+  return 'plumagram:storage-copy:' + rootScope.myId;
+}
+
+function readCopy(): {data: CloudStorage, hadFile: boolean} {
+  try {
+    const raw = JSON.parse(localStorage.getItem(copyKey()) || 'null');
+    const data = validate(raw?.data);
+    return data ? {data, hadFile: !!raw.hadFile} : undefined;
+  } catch(err) {}
+}
+
+function writeCopy(data: CloudStorage, hadFile: boolean) {
+  try {
+    localStorage.setItem(copyKey(), JSON.stringify({data, hadFile}));
+  } catch(err) {}
+}
+
+/** Two versions of the folders as one: a folder's name and colour from the newer, the records of both */
+function merge(a: CloudStorage, b: CloudStorage): CloudStorage {
+  const [newer, older] = a.updated >= b.updated ? [a, b] : [b, a];
+  const folders = newer.folders.map((folder) => {
+    const other = older.folders.find((f) => f.id === folder.id);
+    return other ? {...folder, ids: [...new Set([...folder.ids, ...other.ids])]} : folder;
+  });
+  older.folders.forEach((folder) => {
+    if(!folders.some((f) => f.id === folder.id)) folders.push(folder);
+  });
+  const tags = {...older.tags};
+  for(const tag in newer.tags) tags[tag] = [...new Set([...(tags[tag] || []), ...newer.tags[tag]])];
+  return {...older, ...newer, folders, tags, next: Math.max(newer.next || 1, older.next || 1)};
+}
+
+function sameRecords(a: CloudStorage, b: CloudStorage) {
+  return JSON.stringify(a.folders) === JSON.stringify(b.folders) && JSON.stringify(a.tags) === JSON.stringify(b.tags);
 }
 
 /** The service file's message in Saved Messages (the newest one, if there are several) */
@@ -99,26 +167,55 @@ async function findStorageMessage(): Promise<Message.message> {
   return message;
 }
 
-/** The folders as they are in the cloud now */
+/** The folders as they are in the cloud now (made again from this browser's copy when the file was deleted) */
 export async function loadCloudStorage(force = false): Promise<CloudStorage> {
   if(cached && (!force || cached.mid === undefined && Date.now() - cached.data.updated < 15e3)) return cached.data;
 
+  const copy = readCopy();
   const message = await findStorageMessage();
   if(!message) {
-    cached = {data: empty()};
+    if(copy?.hadFile && copy.data.folders.length) {
+      // * the file was there and is gone: deleted — sent again from the copy
+      cached = {data: copy.data};
+      await saveCloudStorage(copy.data);
+      notifyRestored();
+      return copy.data;
+    }
+    cached = {data: copy?.data || empty()};
     return cached.data;
   }
 
   const {default: appDownloadManager} = await import('@lib/appDownloadManager');
-  const blob = await appDownloadManager.downloadMedia({media: (message.media as any).document});
-  let data = empty();
+  let data: CloudStorage;
   try {
-    const parsed = JSON.parse(await (blob as Blob).text());
-    if(parsed && typeof parsed === 'object') data = {...data, ...parsed, folders: parsed.folders || [], tags: parsed.tags || {}};
+    const blob = await appDownloadManager.downloadMedia({media: (message.media as any).document});
+    data = validate(JSON.parse(await (blob as Blob).text()));
   } catch(err) {}
 
-  cached = {data, mid: message.mid};
+  cached = {data: data || copy?.data || empty(), mid: message.mid};
+  if(!data) {
+    // * a broken file is never taken in: the copy stays, and is written over it when there is one
+    if(copy) await saveCloudStorage(copy.data);
+    return cached.data;
+  }
+
+  if(copy && !sameRecords(copy.data, data) && copy.data.updated > data.updated) {
+    // * this browser has something newer than the cloud (a write that did not get through): both, as one
+    const merged = merge(copy.data, data);
+    cached = {data: merged, mid: message.mid};
+    await saveCloudStorage(merged);
+    return merged;
+  }
+
+  writeCopy(data, true);
   return data;
+}
+
+function notifyRestored() {
+  import('@components/toast').then(({toast}) => toast(pt(
+    'Папки Хранилища восстановлены с этого устройства',
+    'The storage folders were restored from this device'
+  )));
 }
 
 /** Writes the folders back: the file in the same message is replaced, or sent the first time */
@@ -153,6 +250,7 @@ export async function saveCloudStorage(data: CloudStorage) {
 
   // * after the first sending the message is found again on the next load (its id is the server's by then)
   cached = {data, mid: message?.mid};
+  writeCopy(data, true);
 }
 
 export async function createFolder(name: string) {
@@ -182,3 +280,6 @@ export async function removeFromFolder(folderId: number, mid: number) {
   folder.ids = folder.ids.filter((id) => id !== toTdId(mid));
   await saveCloudStorage(data);
 }
+
+// * for checks from the console: plumagram.storageChecks
+export const storageChecks = {validate, merge, isStorageDocument};
