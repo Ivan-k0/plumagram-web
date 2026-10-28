@@ -9,7 +9,7 @@ import rootScope from '@lib/rootScope';
 import {bindManagersToSession} from '@lib/accounts/bindManagersToAccount';
 import {pt} from '@/plumagram/settings';
 import {getTargetBubble} from '@/plumagram/target';
-import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
+import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import type {Message} from '@layer';
 
 const TAG_REGEXP = /#([\p{L}\p{N}_]{1,64})/gu;
@@ -63,9 +63,7 @@ export function openStorage() {
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
 
-  const title = document.createElement('div');
-  title.className = 'pg-settings-title';
-  title.textContent = pt('Хранилище', 'Storage');
+  const title = makeTitle(pt('Хранилище', 'Storage'));
 
   const input = document.createElement('input');
   input.className = 'pg-palette-input';

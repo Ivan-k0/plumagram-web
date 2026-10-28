@@ -7,7 +7,7 @@ import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
 import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
-import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon} from '@/plumagram/overlay';
+import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import {openStorage, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
@@ -429,15 +429,61 @@ export function openCommandPalette() {
   focusSoon(input);
 }
 
+/** Every PlumaGram shortcut, in groups, one per line */
+function openHotkeysList() {
+  const panel = document.createElement('div');
+  panel.className = 'pg-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.tabIndex = -1;
+
+  const list = document.createElement('div');
+  list.className = 'pg-list';
+
+  const group = (name: string, rows: [string, string][]) => {
+    const caption = document.createElement('div');
+    caption.className = 'pg-settings-row-sub pg-storage-caption';
+    caption.textContent = name;
+    list.append(caption);
+    rows.forEach(([text, keys]) => {
+      const item = document.createElement('div');
+      item.className = 'pg-item pg-item--static';
+      const title = document.createElement('span');
+      title.className = 'pg-item-title';
+      title.textContent = text;
+      const kbd = document.createElement('kbd');
+      kbd.textContent = keys;
+      item.append(title, kbd);
+      list.append(item);
+    });
+  };
+
+  const withKeys = ACTIONS.filter((action) => action.hotkey);
+  group(pt('Общие', 'General'), [
+    [pt('Все действия по названию', 'Every action by name'), `${MOD}K`],
+    ...withKeys.filter((action) => !action.onMessage).map((action) => [action.title(), action.hotkey] as [string, string])
+  ]);
+  group(pt('Сообщение под мышью (или последнее, на которое навёл)', 'The message under the pointer (or hovered last)'),
+    withKeys.filter((action) => action.onMessage).map((action) => [action.title(), action.hotkey] as [string, string]));
+  group(pt('В просмотре видео', 'In the video viewer'), [
+    [pt('Пауза', 'Pause'), 'K'],
+    [pt('10 секунд назад / вперёд', '10 seconds back / forward'), 'J / L'],
+    [pt('К 0–90 % видео', 'To 0–90 % of the video'), '0–9'],
+    [pt('Медленнее / быстрее', 'Slower / faster'), `${SHIFT}< / ${SHIFT}>`],
+    [pt('Картинка в картинке', 'Picture in picture'), 'P']
+  ]);
+
+  panel.append(makeTitle(pt('Горячие клавиши', 'Keyboard shortcuts')), list);
+  createOverlay(panel);
+  focusSoon(panel);
+}
+
 export function openPlumaSettings() {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
   panel.tabIndex = -1;
 
-  const title = document.createElement('div');
-  title.className = 'pg-settings-title';
-  title.textContent = 'PlumaGram';
+  const title = makeTitle('PlumaGram');
 
   const makeRow = (key: 'noPeek' | 'noAds' | 'hideChannelReactions', text: string, sub: string, toggle: () => void) => {
     const row = document.createElement('div');
@@ -487,14 +533,12 @@ export function openPlumaSettings() {
   filtersRow.textContent = pt('Фильтры сообщений…', 'Message filters…');
   filtersRow.addEventListener('click', openFiltersManager);
 
-  const hint = document.createElement('div');
-  hint.className = 'pg-settings-hint';
-  hint.textContent = pt(
-    `${MOD}K — все действия по названию · ${ALT}H — «Не подглядывай!» · ${MOD}0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}R — ответить, ${ALT}F — переслать, ${ALT}S — в Избранное, ${ALT}P — закрепить, ${ALT}T — перевести, ${ALT}N — напомнить позже, ${ALT}X — скрывать похожие; ${ALT}${SHIFT}T — перевести весь чат. ${ALT}M — тихий режим чата, ${ALT}D — не беспокоить. ${ALT}J — последнее уведомление и обратно, ${ALT}A — следующий аккаунт, ${ALT}Z — заметка, ${ALT}B — Хранилище, ${ALT}3 — метка на своё сообщение в Избранном`,
-    `${MOD}K — every action by name · ${ALT}H — «No peeking!» · ${MOD}0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}R — reply, ${ALT}F — forward, ${ALT}S — to Saved, ${ALT}P — pin, ${ALT}T — translate, ${ALT}N — remind me later, ${ALT}X — hide similar; ${ALT}${SHIFT}T — translate the whole chat. ${ALT}M — mute the chat, ${ALT}D — do not disturb. ${ALT}J — last notification and back, ${ALT}A — next account, ${ALT}Z — note, ${ALT}B — storage, ${ALT}3 — tag your message in Saved`
-  );
+  const hotkeysRow = document.createElement('div');
+  hotkeysRow.className = 'pg-settings-row';
+  hotkeysRow.tabIndex = 0;
+  hotkeysRow.setAttribute('role', 'button');
+  hotkeysRow.textContent = pt('Горячие клавиши…', 'Keyboard shortcuts…');
+  hotkeysRow.addEventListener('click', openHotkeysList);
 
   panel.append(
     title,
@@ -502,7 +546,7 @@ export function openPlumaSettings() {
     makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
     makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
     filtersRow,
-    hint
+    hotkeysRow
   );
 
   createOverlay(panel);

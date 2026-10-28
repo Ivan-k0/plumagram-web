@@ -3,6 +3,7 @@
  */
 
 import appNavigationController, {NavigationItem} from '@components/appNavigationController';
+import Icon from '@components/icon';
 
 let openOverlay: HTMLElement;
 let overlayNavigationItem: NavigationItem;
@@ -110,6 +111,24 @@ export function focusSoon(element: HTMLElement) {
   setTimeout(() => element.isConnected && element.focus(), 60);
 }
 
+/** The title of our window, with a close button on the right as in the app's own popups */
+export function makeTitle(text: string, closable = true) {
+  const title = document.createElement('div');
+  title.className = 'pg-settings-title';
+  const label = document.createElement('span');
+  label.textContent = text;
+  title.append(label);
+  if(closable) {
+    const close = document.createElement('button');
+    close.className = 'pg-close';
+    close.setAttribute('aria-label', 'Close');
+    close.append(Icon('close'));
+    close.addEventListener('click', () => closeOverlay());
+    title.append(close);
+  }
+  return title;
+}
+
 export type ChoiceOption = {
   text: string,
   run: () => void
@@ -122,9 +141,8 @@ export function openChoicePicker(titleText: string, options: ChoiceOption[], anc
   panel.setAttribute('role', 'dialog');
   panel.tabIndex = -1;
 
-  const title = document.createElement('div');
-  title.className = 'pg-settings-title';
-  title.textContent = titleText;
+  // * a choice next to a message is a small menu: no close button there
+  const title = makeTitle(titleText, !anchor);
 
   const list = document.createElement('div');
   list.className = 'pg-list';

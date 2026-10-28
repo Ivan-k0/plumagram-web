@@ -6,7 +6,7 @@
 
 import {pt} from '@/plumagram/settings';
 import {getTargetBubble} from '@/plumagram/target';
-import {createOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
+import {createOverlay, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
 
 export const SCOPE_ALL = 0, SCOPE_CHANNELS = 1, SCOPE_CHANNELS_GROUPS = 2, SCOPE_CHAT = 3;
 
@@ -205,9 +205,7 @@ export function openFiltersManager() {
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
 
-  const title = document.createElement('div');
-  title.className = 'pg-settings-title';
-  title.textContent = pt('Фильтры сообщений', 'Message filters');
+  const title = makeTitle(pt('Фильтры сообщений', 'Message filters'));
 
   const input = document.createElement('input');
   input.className = 'pg-palette-input';
