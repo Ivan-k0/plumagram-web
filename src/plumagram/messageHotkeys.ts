@@ -102,7 +102,7 @@ export async function runMessageHotkey(action: MessageHotkeyAction) {
       }
       options.push({text: pt('Завтра в 9:00', 'Tomorrow at 9:00'), run: remindAt(tomorrow(9))});
 
-      openChoicePicker(pt('Напомнить позже', 'Remind me later'), options);
+      openChoicePicker(pt('Напомнить позже', 'Remind me later'), options, bubble.querySelector<HTMLElement>('.bubble-content') || bubble);
       break;
     }
 

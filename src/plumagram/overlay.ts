@@ -12,6 +12,7 @@ export function isOverlayOpen() {
 }
 
 export function closeOverlay() {
+  if(openOverlay) (document.activeElement as HTMLElement)?.blur?.();
   openOverlay?.remove();
   openOverlay = undefined;
   if(overlayNavigationItem) {
@@ -21,7 +22,37 @@ export function closeOverlay() {
   }
 }
 
-export function createOverlay(panel: HTMLElement) {
+/**
+ * Where our window stands: next to `anchor` (the message it is about), like a context menu, or else in
+ * the middle of the chat column (the middle of the whole page looked pushed to the top left over the chat)
+ */
+function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLElement) {
+  const margin = 16;
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  if(anchor?.isConnected) {
+    overlay.classList.add('is-anchored');
+    const rect = anchor.getBoundingClientRect();
+    const width = panel.offsetWidth, height = panel.offsetHeight;
+    // * beside the message: under it if it fits, else above it, else as low as it can be
+    const left = Math.min(Math.max(margin, rect.left), vw - width - margin);
+    let top = rect.bottom + 8;
+    if(top + height > vh - margin) top = rect.top - height - 8;
+    if(top < margin) top = Math.max(margin, vh - height - margin);
+    panel.style.left = left + 'px';
+    panel.style.top = top + 'px';
+    return;
+  }
+
+  const column = document.getElementById('column-center');
+  const rect = column?.getBoundingClientRect();
+  if(rect && rect.width >= 360) {
+    overlay.style.paddingLeft = Math.max(margin, rect.left) + 'px';
+    overlay.style.paddingRight = Math.max(margin, vw - rect.right) + 'px';
+  }
+}
+
+export function createOverlay(panel: HTMLElement, anchor?: HTMLElement) {
   closeOverlay();
   const overlay = document.createElement('div');
   overlay.className = 'pg-overlay';
@@ -38,6 +69,25 @@ export function createOverlay(panel: HTMLElement) {
   });
   document.body.append(overlay);
   openOverlay = overlay;
+  placePanel(overlay, panel, anchor);
+
+  // * while our window is open the focus stays in it: the app gives it back to the message field when the
+  // * window before ours closes, and typing went into the chat (Enter sent it)
+  let lastInside: HTMLElement;
+  const keepFocus = (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if(overlay.contains(target)) {
+      lastInside = target;
+      return;
+    }
+    if(openOverlay !== overlay) {
+      document.removeEventListener('focusin', keepFocus, true);
+      return;
+    }
+    (lastInside?.isConnected ? lastInside : overlay.querySelector<HTMLElement>('input, [tabindex]'))?.focus();
+  };
+  document.addEventListener('focusin', keepFocus, true);
+
   // * in the app's back stack, so Esc and «back» close our window first, not the chat under it
   appNavigationController.pushItem(overlayNavigationItem = {
     type: 'popup',
@@ -49,13 +99,24 @@ export function createOverlay(panel: HTMLElement) {
   return overlay;
 }
 
+/**
+ * Focus that stays: when one of our windows replaces another, the app gives the focus back to the message
+ * field as the first one closes — a moment later. Without taking it again, typing went into the chat
+ * (and Enter sent it).
+ */
+export function focusSoon(element: HTMLElement) {
+  element.focus();
+  requestAnimationFrame(() => element.isConnected && element.focus());
+  setTimeout(() => element.isConnected && element.focus(), 60);
+}
+
 export type ChoiceOption = {
   text: string,
   run: () => void
 };
 
 /** A window with a title and a list to pick one from: mouse, arrows and Enter */
-export function openChoicePicker(titleText: string, options: ChoiceOption[]) {
+export function openChoicePicker(titleText: string, options: ChoiceOption[], anchor?: HTMLElement) {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
@@ -102,6 +163,6 @@ export function openChoicePicker(titleText: string, options: ChoiceOption[]) {
   });
 
   panel.append(title, list);
-  createOverlay(panel);
-  (list.firstElementChild as HTMLElement)?.focus();
+  createOverlay(panel, anchor);
+  list.firstElementChild && focusSoon(list.firstElementChild as HTMLElement);
 }

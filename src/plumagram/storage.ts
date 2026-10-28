@@ -8,7 +8,7 @@ import {toast} from '@components/toast';
 import rootScope from '@lib/rootScope';
 import {bindManagersToSession} from '@lib/accounts/bindManagersToAccount';
 import {pt} from '@/plumagram/settings';
-import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker} from '@/plumagram/overlay';
+import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 import type {Message} from '@layer';
 
 const TAG_REGEXP = /#([\p{L}\p{N}_]{1,64})/gu;
@@ -94,7 +94,7 @@ export function openStorage() {
 
   panel.append(title, input, caption, tagsBox, hint);
   createOverlay(panel);
-  input.focus();
+  focusSoon(input);
 
   collectTags().then((tags) => {
     if(!tagsBox.isConnected) return;
@@ -132,7 +132,8 @@ export async function tagHoveredSavedMessage() {
   }
 
   const message = ((bubble as any).message || chat.getMessageByPeer(chat.peerId, +bubble.dataset.mid)) as Message.message;
-  if(!message || message.fwd_from || !message.pFlags?.out) {
+  // * in Saved Messages every message is your own (they carry no «out» flag): only forwarded ones can't be edited
+  if(!message || message.fwd_from) {
     toast(pt('Метку в тексте можно поставить только на своё сообщение, не на пересланное', 'A tag can only go into the text of your own message, not a forwarded one'));
     return;
   }
@@ -153,11 +154,12 @@ export async function tagHoveredSavedMessage() {
   };
 
   const options: ChoiceOption[] = tags.map(({tag}) => ({text: '#' + tag, run: put(tag)}));
-  options.push({text: pt('Новая метка…', 'New tag…'), run: () => askNewTag(put)});
-  openChoicePicker(pt('Поставить метку', 'Add a tag'), options);
+  const anchor = bubble.querySelector<HTMLElement>('.bubble-content') || bubble;
+  options.push({text: pt('Новая метка…', 'New tag…'), run: () => askNewTag(put, anchor)});
+  openChoicePicker(pt('Поставить метку', 'Add a tag'), options, anchor);
 }
 
-function askNewTag(put: (tag: string) => () => Promise<void>) {
+function askNewTag(put: (tag: string) => () => Promise<void>, anchor: HTMLElement) {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   const input = document.createElement('input');
@@ -171,6 +173,6 @@ function askNewTag(put: (tag: string) => () => Promise<void>) {
     put(tag)();
   });
   panel.append(input);
-  createOverlay(panel);
-  input.focus();
+  createOverlay(panel, anchor);
+  focusSoon(input);
 }

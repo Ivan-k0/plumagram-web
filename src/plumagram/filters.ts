@@ -5,7 +5,7 @@
  */
 
 import {pt} from '@/plumagram/settings';
-import {createOverlay, openChoicePicker} from '@/plumagram/overlay';
+import {createOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 
 export const SCOPE_ALL = 0, SCOPE_CHANNELS = 1, SCOPE_CHANNELS_GROUPS = 2, SCOPE_CHAT = 3;
 
@@ -196,7 +196,7 @@ export async function hideSimilarToHovered() {
     {text: pt('В каналах и группах', 'In channels and groups'), run: add(SCOPE_CHANNELS_GROUPS)},
     {text: pt(`Только в «${chatTitle}»`, `Only in «${chatTitle}»`), run: add(SCOPE_CHAT)},
     {text: pt('Везде, скрывать полностью', 'Everywhere, hide entirely'), run: add(SCOPE_ALL, true)}
-  ]);
+  ], bubble.querySelector<HTMLElement>('.bubble-content') || bubble);
 }
 
 /** The list of rules: remove one, or add a new one by text */
@@ -255,5 +255,5 @@ export function openFiltersManager() {
   render();
   panel.append(title, input, list);
   createOverlay(panel);
-  input.focus();
+  focusSoon(input);
 }

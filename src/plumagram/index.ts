@@ -7,7 +7,7 @@ import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
 import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
-import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker} from '@/plumagram/overlay';
+import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import {openStorage, tagHoveredSavedMessage} from '@/plumagram/storage';
 import '@/plumagram/plumagram.scss';
@@ -404,7 +404,7 @@ export function openCommandPalette() {
   });
 
   render();
-  input.focus();
+  focusSoon(input);
 }
 
 export function openPlumaSettings() {
@@ -484,7 +484,7 @@ export function openPlumaSettings() {
   );
 
   createOverlay(panel);
-  panel.focus();
+  focusSoon(panel);
 }
 
 function isEditable(target: EventTarget) {
