@@ -76,6 +76,14 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
     padding: 0;
     background: transparent;
 
+    // * the title of a small menu is a caption, not a window's name
+    .pg-settings-title {
+      padding: 12px 14px 4px;
+      font-size: .875rem;
+      font-weight: var(--font-weight-normal, 400);
+      color: var(--secondary-text-color);
+    }
+
     .pg-panel {
       position: fixed;
       max-width: 320px;
