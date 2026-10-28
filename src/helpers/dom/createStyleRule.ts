@@ -55,7 +55,10 @@ export default function createStyleRule(parent: HTMLElement, selector: string) {
       }
 
       values.set(property, value);
-      rule.style.setProperty(property, value);
+      // * PlumaGram: Chrome 155 does not restyle for a registered custom property changed through the
+      // * CSSOM (the padding under the panels over the chat list stayed 0, hiding the first chat), so
+      // * the one-rule sheet is written anew
+      write();
     },
 
     remove() {
