@@ -125,5 +125,8 @@
     "vitest": "^4.1.10",
     "ws": "^8.21.1"
   },
-  "packageManager": "pnpm@11.16.0"
+  "packageManager": "pnpm@11.16.0",
+  "dependencies": {
+    "@huggingface/transformers": "4.3.1"
+  }
 }

@@ -15,6 +15,10 @@ export type PlumaSettings = {
   hideChannelReactions: boolean,
   /** «Не беспокоить»: no notifications and sounds in this tab until this moment (ms) */
   quietUntil: number,
+  /** voice messages are transcribed in this browser (the model download was agreed to) */
+  localTranscribe: boolean,
+  /** the bigger, slower and more accurate model for voice messages */
+  transcribeAccurate: boolean,
   /** the video quality picked last time (480 / 720 / 1080), 0 — «Авто» */
   videoQuality: number
 };
@@ -26,7 +30,9 @@ const DEFAULTS: PlumaSettings = {
   noAds: true,
   hideChannelReactions: false,
   quietUntil: 0,
-  videoQuality: 0
+  videoQuality: 0,
+  localTranscribe: false,
+  transcribeAccurate: false
 };
 
 function load(): PlumaSettings {
@@ -52,7 +58,7 @@ export function setPlumaSetting<K extends keyof PlumaSettings>(key: K, value: Pl
   } catch(err) {}
 }
 
-export function togglePlumaSetting(key: 'noPeek' | 'noAds' | 'hideChannelReactions') {
+export function togglePlumaSetting(key: 'noPeek' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate') {
   setPlumaSetting(key, !settingsSignal()[key]);
   return settingsSignal()[key];
 }

@@ -1,4 +1,6 @@
 import {children, createEffect, createMemo, createUniqueId, JSX, onCleanup, Show} from 'solid-js';
+import {askLocalTranscription, transcribeLocally} from '@/plumagram/transcribe';
+import {pt} from '@/plumagram/settings';
 import {createStore} from 'solid-js/store';
 import {Message} from '@layer';
 import I18n, {i18n} from '@lib/langPack';
@@ -7,10 +9,8 @@ import ListenerSetter from '@helpers/listenerSetter';
 import findUpClassName from '@helpers/dom/findUpClassName';
 import noop from '@helpers/noop';
 import {IconTsx} from '@components/iconTsx';
-import {hideToast, toastNew} from '@components/toast';
-import anchorCallback from '@helpers/dom/anchorCallback';
+import {toast} from '@components/toast';
 import A11yButton from '@components/a11yButton';
-import {hotReloadGuard} from '@lib/solidjs/hotReloadGuardProvider';
 
 
 /**
@@ -191,15 +191,21 @@ export default function createAudioTranscription(options: {
     }
 
     if(!rootScope.getPremium()) {
-      toastNew({
-        langPackKey: 'AudioAndVideoTranscription.PremiumAlert',
-        langPackArguments: [anchorCallback(() => {
-          hideToast();
-          hotReloadGuard.showPremiumPopup({feature: 'voice_to_text'});
-        })]
+      // * PlumaGram: without Premium the text is made in this browser (asked once: the model is downloaded)
+      askLocalTranscription().then((yes) => {
+        if(!yes) return;
+        setState('status', 'loading');
+        transcribeLocally(message as Message.message).then(
+          (text) => setState((prev) => reduceTranscribed(prev, {text})),
+          (err) => {
+            setState('status', 'idle');
+            toast(pt('Не удалось расшифровать: ', 'Could not transcribe: ') + (err?.message || err));
+          }
+        );
       });
       return;
     }
+
 
     setState('status', 'loading');
     rootScope.managers.appMessagesManager.transcribeAudio(message).catch(noop);
