@@ -6,6 +6,7 @@
 import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
 import {plumaSettings, pt, togglePlumaSetting} from '@/plumagram/settings';
+import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -76,6 +77,42 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'ads sponsored реклама спонсор',
   state: () => onOff(plumaSettings().noAds),
   run: toggleNoAds
+}, {
+  id: 'reply',
+  title: () => pt('Ответить на сообщение под мышью', 'Reply to the message under the pointer'),
+  keywords: 'reply ответ ответить',
+  hotkey: `${ALT}+R`,
+  run: () => runMessageHotkey('reply')
+}, {
+  id: 'forward',
+  title: () => pt('Переслать сообщение под мышью', 'Forward the message under the pointer'),
+  keywords: 'forward переслать',
+  hotkey: `${ALT}+F`,
+  run: () => runMessageHotkey('forward')
+}, {
+  id: 'toSaved',
+  title: () => pt('Сообщение под мышью — в Избранное', 'Message under the pointer to Saved Messages'),
+  keywords: 'save saved store хранилище избранное сохранить',
+  hotkey: `${ALT}+S`,
+  run: () => runMessageHotkey('saved')
+}, {
+  id: 'pin',
+  title: () => pt('Закрепить сообщение под мышью', 'Pin the message under the pointer'),
+  keywords: 'pin unpin закрепить открепить',
+  hotkey: `${ALT}+P`,
+  run: () => runMessageHotkey('pin')
+}, {
+  id: 'translate',
+  title: () => pt('Перевести сообщение под мышью', 'Translate the message under the pointer'),
+  keywords: 'translate перевод перевести',
+  hotkey: `${ALT}+T`,
+  run: () => runMessageHotkey('translate')
+}, {
+  id: 'translateChat',
+  title: () => pt('Перевести весь чат', 'Translate the whole chat'),
+  keywords: 'translate chat перевод перевести чат весь',
+  hotkey: `${ALT}+⇧+T`,
+  run: () => toggleChatTranslation()
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
@@ -281,8 +318,10 @@ export function openPlumaSettings() {
   const hint = document.createElement('div');
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
-    `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное`,
-    `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages`
+    `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести; ${ALT}+⇧+T — перевести весь чат`,
+    `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate; ${ALT}+⇧+T — translate the whole chat`
   );
 
   panel.append(
@@ -316,12 +355,39 @@ function onKeyDown(e: KeyboardEvent) {
     return;
   }
 
-  if(e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyH') {
+  if(!e.altKey || e.ctrlKey || e.metaKey) return;
+
+  if(e.shiftKey) {
+    if(e.code === 'KeyT') {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleChatTranslation();
+    }
+    return;
+  }
+
+  if(e.code === 'KeyH') {
     e.preventDefault();
     e.stopPropagation();
     toggleNoPeek();
+    return;
+  }
+
+  const messageAction = MESSAGE_HOTKEYS[e.code];
+  if(messageAction) {
+    e.preventDefault();
+    e.stopPropagation();
+    runMessageHotkey(messageAction);
   }
 }
+
+const MESSAGE_HOTKEYS: {[code: string]: MessageHotkeyAction} = {
+  KeyR: 'reply',
+  KeyF: 'forward',
+  KeyS: 'saved',
+  KeyP: 'pin',
+  KeyT: 'translate'
+};
 
 export default function initPlumaGram() {
   window.addEventListener('keydown', onKeyDown, {capture: true});

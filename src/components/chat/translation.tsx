@@ -7,7 +7,6 @@ import I18n, {i18n} from '@lib/langPack';
 import {NULL_PEER_ID} from '@appManagers/constants';
 import SearchIndex from '@lib/searchIndex';
 import Languages from '@lib/tinyld/languages';
-import usePremium from '@stores/premium';
 import ButtonMenuToggle from '@components/buttonMenuToggle';
 import Icon from '@components/icon';
 import showPickUserPopup from '@components/popups/pickUser';
@@ -120,13 +119,14 @@ function TranslationPlateBody(props: {
   const i = new I18n.IntlElement({key: 'DoNotTranslateLanguage'});
 
   const peerTranslation = createMemo(() => usePeerTranslation(props.peerId()));
-  const isPremium = usePremium();
+  const isPremium = () => true; // * PlumaGram: no Premium needed for translation
 
   createEffect(() => {
     i.compareAndUpdate({args: [i18n(`Language.${peerTranslation().peerLanguage()}`)]});
   });
 
-  createEffect(() => props.setHidden(!peerTranslation().shouldShow()));
+  // * PlumaGram: the bar stays while the chat is translated, so it can be turned back
+  createEffect(() => props.setHidden(!(peerTranslation().shouldShow() || peerTranslation().enabled())));
 
   const listenerSetter = new ListenerSetter();
   const menu = ButtonMenuToggle({

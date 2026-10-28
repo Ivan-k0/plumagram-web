@@ -4,7 +4,6 @@ import {randomLong} from '@helpers/random';
 import {LangPackLanguage} from '@layer';
 import I18n, {i18n, join} from '@lib/langPack';
 import rootScope from '@lib/rootScope';
-import usePremium from '@stores/premium';
 import {pickLanguage} from '@components/chat/translation';
 import CheckboxFieldTsx from '@components/checkboxFieldTsx';
 import RadioFieldTsx from '@components/radioFieldTsx';
@@ -21,7 +20,7 @@ import {hotReloadGuard} from '@lib/solidjs/hotReloadGuardProvider';
 
 const TranslateSection = () => {
   const [appSettings, setAppSettings] = useAppSettings();
-  const isPremium = usePremium();
+  const isPremium = () => true; // * PlumaGram: translating whole chats needs no Premium
 
   const doNotTranslate = createMemo(() => {
     const arr = appSettings.translations.doNotTranslate;
