@@ -66,3 +66,12 @@ export function pt(ru: string, en: string) {
 export function isQuietNow() {
   return settingsSignal().quietUntil > Date.now();
 }
+
+// * the chat of the last message notification in this tab (for «последнее уведомление и обратно»)
+let lastNotifiedPeerId: PeerId;
+export function setLastNotifiedPeer(peerId: PeerId) {
+  lastNotifiedPeerId = peerId;
+}
+export function getLastNotifiedPeer() {
+  return lastNotifiedPeerId;
+}

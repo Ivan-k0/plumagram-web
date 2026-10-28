@@ -1,5 +1,5 @@
 import type {PushNotificationObject} from '@lib/serviceWorker/push';
-import {isQuietNow} from '@/plumagram/settings';
+import {isQuietNow, setLastNotifiedPeer} from '@/plumagram/settings';
 import {MOUNT_CLASS_TO} from '@config/debug';
 import getPeerTitle from '@components/wrappers/getPeerTitle';
 import wrapMessageForReply from '@components/wrappers/messageForReply';
@@ -707,6 +707,8 @@ export class UiNotificationsManager {
     /** the server's loc_key this notification stands in for, so a click routes the same way */
     locKey?: string
   }) {
+    if(!isDifferentAccount) setLastNotifiedPeer(peerId); // * PlumaGram: «последнее уведомление» hotkey
+
     const hasMoreThanOneAccount = (await AccountController.getTotalAccounts()) > 1;
     if((hasMoreThanOneAccount && isOtherTabActive) || isDifferentAccount) {
       // ' ➜ '

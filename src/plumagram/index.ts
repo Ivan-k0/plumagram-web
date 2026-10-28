@@ -5,7 +5,7 @@
 
 import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
-import {isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
+import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker} from '@/plumagram/overlay';
 import '@/plumagram/plumagram.scss';
@@ -90,6 +90,56 @@ export function toggleChannelReactions() {
   toast(on ?
     pt('Реакции в каналах скрыты', 'Reactions in channels are hidden') :
     pt('Реакции в каналах снова видны', 'Reactions in channels are shown again'));
+}
+
+// * where «последнее уведомление» jumped from, to go back by the same key
+let jumpedFromPeerId: PeerId;
+
+/** «Последнее уведомление и обратно»: to the chat of the last notification, and by the same key back */
+async function jumpToLastNotification() {
+  const {default: appImManager} = await import('@lib/appImManager');
+  const current = appImManager.chat?.peerId;
+  const last = getLastNotifiedPeer();
+
+  if(jumpedFromPeerId && current === last) {
+    const back = jumpedFromPeerId;
+    jumpedFromPeerId = undefined;
+    appImManager.setPeer({peerId: back});
+    return;
+  }
+
+  if(!last) {
+    toast(pt('Уведомлений пока не было', 'No notifications yet'));
+    return;
+  }
+
+  jumpedFromPeerId = current || undefined;
+  appImManager.setPeer({peerId: last});
+}
+
+/** Next signed-in account, round */
+async function switchToNextAccount() {
+  const [{default: AccountController}, {getCurrentAccount}, {default: switchAccount}] = await Promise.all([
+    import('@lib/accounts/accountController'),
+    import('@lib/accounts/getCurrentAccount'),
+    import('@lib/accounts/switchAccount')
+  ]);
+  const total = await AccountController.getTotalAccounts();
+  if(total < 2) {
+    toast(pt('Вошли только в один аккаунт — добавить: меню ☰ → аккаунт', 'Only one account is signed in'));
+    return;
+  }
+  const next = (getCurrentAccount() % total) + 1;
+  switchAccount(next as any);
+}
+
+/** «Заметка»: Saved Messages with the cursor in the message field */
+async function openNote() {
+  const {default: appImManager} = await import('@lib/appImManager');
+  await appImManager.setPeer({peerId: appImManager.myId});
+  setTimeout(() => {
+    (document.querySelector('.chat:not(.hide) .chat-input [contenteditable="true"]') as HTMLElement)?.focus();
+  }, 300);
 }
 
 async function openSavedMessages() {
@@ -190,6 +240,24 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'translate chat перевод перевести чат весь',
   hotkey: `${ALT}+⇧+T`,
   run: () => toggleChatTranslation()
+}, {
+  id: 'lastNotification',
+  title: () => pt('Последнее уведомление и обратно', 'Last notification and back'),
+  keywords: 'notification last jump back уведомление последнее назад обратно',
+  hotkey: `${ALT}+J`,
+  run: jumpToLastNotification
+}, {
+  id: 'nextAccount',
+  title: () => pt('Следующий аккаунт', 'Next account'),
+  keywords: 'account switch аккаунт сменить переключить',
+  hotkey: `${ALT}+A`,
+  run: switchToNextAccount
+}, {
+  id: 'note',
+  title: () => pt('Заметка (в Избранное)', 'Note (to Saved Messages)'),
+  keywords: 'note заметка записать memo',
+  hotkey: `${ALT}+Z`,
+  run: openNote
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
@@ -369,9 +437,9 @@ export function openPlumaSettings() {
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
     `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить`,
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка`,
     `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb`
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note`
   );
 
   panel.append(
@@ -432,6 +500,14 @@ function onKeyDown(e: KeyboardEvent) {
     return;
   }
 
+  const appAction = APP_HOTKEYS[e.code];
+  if(appAction) {
+    e.preventDefault();
+    e.stopPropagation();
+    appAction();
+    return;
+  }
+
   if(e.code === 'KeyM' || e.code === 'KeyD') {
     e.preventDefault();
     e.stopPropagation();
@@ -446,6 +522,12 @@ function onKeyDown(e: KeyboardEvent) {
     runMessageHotkey(messageAction);
   }
 }
+
+const APP_HOTKEYS: {[code: string]: () => void} = {
+  KeyJ: jumpToLastNotification,
+  KeyA: switchToNextAccount,
+  KeyZ: openNote
+};
 
 const MESSAGE_HOTKEYS: {[code: string]: MessageHotkeyAction} = {
   KeyR: 'reply',
