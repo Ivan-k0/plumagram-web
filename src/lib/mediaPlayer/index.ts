@@ -1,4 +1,5 @@
 import appMediaPlaybackController from '@components/appMediaPlaybackController';
+import {handlePlumaPlayerKey} from '@/plumagram/video';
 import {IS_APPLE_MOBILE, IS_MOBILE} from '@environment/userAgent';
 import IS_TOUCH_SUPPORTED from '@environment/touchSupport';
 import cancelEvent from '@helpers/dom/cancelEvent';
@@ -404,6 +405,15 @@ export default class VideoPlayer extends ControlsHover {
           } else if(wrapper.classList.contains('ckin__fullscreen') && (key === 'ArrowLeft' || key === 'ArrowRight') && this.canSeek) {
             if(key === 'ArrowLeft') appMediaPlaybackController.seekBackward({action: 'seekbackward'});
             else appMediaPlaybackController.seekForward({action: 'seekforward'});
+          } else if(handlePlumaPlayerKey(e, { // * PlumaGram: J / K / L, 0–9, Shift+< / >, P
+            video,
+            canSeek: this.canSeek,
+            canPause: this.canPause,
+            togglePlay: () => this.togglePlay(),
+            changeRate: (amount) => this.playbackRateButton.controls.changeRateByAmount(amount),
+            pictureInPicture: () => this.requestPictureInPicture()
+          })) {
+            good = true;
           } else {
             good = false;
           }

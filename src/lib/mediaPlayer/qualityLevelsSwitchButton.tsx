@@ -10,6 +10,7 @@ import deferredPromise from '@helpers/cancellablePromise';
 import {hlsInstancesByVideo} from '@lib/hls/hlsInstancesByVideo';
 import {HlsStandardResolutionHeight} from '@lib/hls/types';
 import {snapQualityHeight} from '@lib/hls/snapQualityHeight';
+import {rememberVideoQuality} from '@/plumagram/video';
 import {i18n, LangPackKey} from '@lib/langPack';
 
 type QualityLevelsSwitchButtonProps = {
@@ -163,6 +164,7 @@ async function getButtonMenuQualityOptions(
 
       hls.currentLevel = idx;
       onHeightSelect(height);
+      rememberVideoQuality(height); // * PlumaGram
       // hls.autoLevelCapping = idx;
     }
 
@@ -174,6 +176,11 @@ async function getButtonMenuQualityOptions(
     };
   });
 
+  // * PlumaGram: a level fixed before the menu was built (the remembered quality) is shown as picked
+  if(!hls.autoLevelEnabled && hls.currentLevel >= 0 && levels[hls.currentLevel]) {
+    onHeightSelect(snapQualityHeight(levels[hls.currentLevel].height));
+  }
+
   const result: ButtonMenuItemOptionsVerifiable[] = [
     {
       id: 'auto',
@@ -182,6 +189,7 @@ async function getButtonMenuQualityOptions(
       onClick: () => {
         hls.currentLevel = -1;
         onHeightSelect();
+        rememberVideoQuality(); // * PlumaGram
       // hls.autoLevelCapping = -1;
       }
     },

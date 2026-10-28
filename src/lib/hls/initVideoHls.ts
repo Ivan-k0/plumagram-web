@@ -3,6 +3,7 @@ import {Middleware} from '@helpers/middleware';
 
 import {log} from '@lib/hls/common';
 import {hlsInstancesByVideo} from '@lib/hls/hlsInstancesByVideo';
+import {getPreferredLevelIndex} from '@/plumagram/video';
 
 type InitVideoHlsParameters = {
   video: HTMLVideoElement;
@@ -29,6 +30,12 @@ export async function initVideoHls({video, src, middleware}: InitVideoHlsParamet
   });
 
   hlsInstancesByVideo.set(video, hls);
+
+  // * PlumaGram: start with the quality picked last time
+  hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+    const idx = getPreferredLevelIndex(data.levels);
+    if(idx !== -1) hls.currentLevel = idx;
+  });
 
   hls.loadSource(src);
   hls.attachMedia(video as HTMLMediaElement);

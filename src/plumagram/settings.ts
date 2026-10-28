@@ -12,7 +12,9 @@ export type PlumaSettings = {
   /** «Без рекламы»: no sponsored messages in channels and bots */
   noAds: boolean,
   /** «Не беспокоить»: no notifications and sounds in this tab until this moment (ms) */
-  quietUntil: number
+  quietUntil: number,
+  /** the video quality picked last time (480 / 720 / 1080), 0 — «Авто» */
+  videoQuality: number
 };
 
 const STORAGE_KEY = 'plumagram:settings';
@@ -20,7 +22,8 @@ const STORAGE_KEY = 'plumagram:settings';
 const DEFAULTS: PlumaSettings = {
   noPeek: false,
   noAds: true,
-  quietUntil: 0
+  quietUntil: 0,
+  videoQuality: 0
 };
 
 function load(): PlumaSettings {
