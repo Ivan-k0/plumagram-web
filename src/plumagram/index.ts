@@ -9,6 +9,7 @@ import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, tog
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
+import {openStorage, tagHoveredSavedMessage} from '@/plumagram/storage';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -271,6 +272,18 @@ const ACTIONS: PaletteAction[] = [{
   hotkey: `${ALT}+Z`,
   run: openNote
 }, {
+  id: 'storage',
+  title: () => pt('Хранилище', 'Storage'),
+  keywords: 'storage tags saved хранилище метки избранное теги',
+  hotkey: `${ALT}+B`,
+  run: openStorage
+}, {
+  id: 'tagSaved',
+  title: () => pt('Поставить метку на своё сообщение в Избранном', 'Tag your message in Saved Messages'),
+  keywords: 'tag hashtag метка хэштег хранилище',
+  hotkey: `${ALT}+3`,
+  run: tagHoveredSavedMessage
+}, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
   keywords: 'saved favorites избранное заметка note',
@@ -456,9 +469,9 @@ export function openPlumaSettings() {
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
     `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже, ${ALT}+X — скрывать похожие; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка`,
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже, ${ALT}+X — скрывать похожие; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка, ${ALT}+B — Хранилище, ${ALT}+3 — метка на своё сообщение в Избранном`,
     `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later, ${ALT}+X — hide similar; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note`
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later, ${ALT}+X — hide similar; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note, ${ALT}+B — storage, ${ALT}+3 — tag your message in Saved`
   );
 
   panel.append(
@@ -544,6 +557,8 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 const APP_HOTKEYS: {[code: string]: () => void} = {
+  KeyB: openStorage,
+  Digit3: tagHoveredSavedMessage,
   KeyX: hideSimilarToHovered,
   KeyJ: jumpToLastNotification,
   KeyA: switchToNextAccount,
