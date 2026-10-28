@@ -1,4 +1,5 @@
 import buttonKeyDown from '@helpers/solid/buttonKeyDown';
+import {plumaSettings} from '@/plumagram/settings';
 import makeMediaPreviewsAccessible from '@helpers/dom/mediaPreviewAccessibility';
 import type {AppImManager, ChatSavedPosition, ChatSetInnerPeerOptions, ChatSetPeerOptions} from '@lib/appImManager';
 import type {HistoryResult, MyEphemeralMessage, MyMessage} from '@appManagers/appMessagesManager';
@@ -13777,6 +13778,7 @@ export default class ChatBubbles {
   }
   private async loadSponsoredMessages() {
     if(this.sponsoredMessagesLoaded) return;
+    if(plumaSettings().noAds) return; // * PlumaGram: «Без рекламы»
 
     const log = this.log.bindPrefix('sponsored-' + (Math.random() * 1000 | 0));
 

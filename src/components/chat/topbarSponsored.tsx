@@ -1,4 +1,5 @@
 import {Accessor, createEffect, createSignal, on, Show} from 'solid-js';
+import {plumaSettings} from '@/plumagram/settings';
 import Modes from '@config/modes';
 import {AppManagers} from '@lib/managers';
 import {NULL_PEER_ID} from '@appManagers/constants';
@@ -42,6 +43,7 @@ function SponsoredPlateBody(props: {
     props.setHidden(true);
     if(peerId$ === NULL_PEER_ID || !peerId$.isUser()) return;
     if(!props.chat.isBot) return;
+    if(plumaSettings().noAds) return; // * PlumaGram: «Без рекламы»
 
     props.managers.appMessagesManager.getSponsoredMessage(peerId$)
     .then((m) => {

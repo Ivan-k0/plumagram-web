@@ -1,20 +1,10 @@
 {
-    "name": "Telegram Web",
-    "short_name": "Telegram Web",
-    "id": "/k/",
+    "name": "PlumaGram",
+    "short_name": "PlumaGram",
+    "id": "/",
     "start_url": "./",
     "scope": "./",
-    "scope_extensions": [
-        {
-            "type": "origin",
-            "origin": "https://t.me"
-        },
-        {
-            "type": "origin",
-            "origin": "https://telegram.me"
-        }
-    ],
-    "description": "Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.",
+    "description": "PlumaGram — unofficial Telegram client.",
     "icons": [
         {
             "src": "assets/img/android-chrome-36x36.png?v=jw3mK7G9Ry",
@@ -62,11 +52,6 @@
             "type": "image/png"
         }
     ],
-    "screenshots" : [{
-        "src": "assets/img/screenshot.jpg",
-        "sizes": "1280x910",
-        "type": "image/jpeg"
-    }],
     "share_target": {
         "action": "./share/",
         "method": "POST",
@@ -75,14 +60,15 @@
             "title": "title",
             "text": "text",
             "url": "url",
-            "files": [{
-                "name": "files",
-                "accept": "*/*"
-            }]
+            "files": [
+                {
+                    "name": "files",
+                    "accept": "*/*"
+                }
+            ]
         }
     },
     "theme_color": "#fffffe",
     "background_color": "#ffffff",
-    "display": "standalone",
-    "gcm_sender_id": "122867383838"
+    "display": "standalone"
 }

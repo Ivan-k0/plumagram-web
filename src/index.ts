@@ -25,6 +25,7 @@ import '@lib/polyfill';
 import '@lib/debug/mountLogExport'; // main-thread-only: wires window.downloadLogs / collectLogs
 import '@lib/debug/memoryReport'; // main-thread-only: wires window.memoryReport
 import '@lib/debug/memoryWatch'; // main-thread-only: wires window.memoryWatch (crash-proof memory series)
+import initPlumaGram from '@/plumagram';
 import apiManagerProxy from '@lib/apiManagerProxy';
 import getProxiedManagers from '@lib/getProxiedManagers';
 import themeController from '@helpers/themeController';
@@ -437,6 +438,7 @@ if(import.meta.env.DEV) {
   cancelImageEvents();
   listenForLinkPress();
   setRootClasses();
+  initPlumaGram();
 
   // ?popups=1 — the popup sandbox: every popup, opened by click with mock data and no session.
   // It has to take over here, before the session is restored and the auth flow starts.

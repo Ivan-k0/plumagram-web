@@ -1,0 +1,180 @@
+// PlumaGram — own styles of the web version
+
+// * «Не подглядывай!»: rows of the chat list and messages are blurred, the one under the pointer is clear
+body.pg-no-peek {
+  .chatlist-chat,
+  .bubbles-inner .bubble .bubble-content,
+  .bubbles-inner .bubble .avatar,
+  .bubbles-group-avatar-container,
+  .chat-info .content,
+  .chat-info .avatar,
+  .pinned-message {
+    filter: blur(7px);
+    transition: filter .18s ease-out;
+  }
+
+  .chatlist-chat:hover,
+  .bubbles-inner .bubble:hover .bubble-content,
+  .bubbles-inner .bubble:hover .avatar,
+  .bubbles-group-avatar-container:hover,
+  .chat-info:hover .content,
+  .chat-info:hover .avatar,
+  .pinned-message:hover {
+    filter: none;
+  }
+}
+
+// * command palette (Ctrl+K) and the PlumaGram settings window
+.pg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 16px 16px;
+  background: rgba(0, 0, 0, .35);
+  animation: pg-fade-in .14s ease-out;
+}
+
+.pg-panel {
+  width: 100%;
+  max-width: 520px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-color);
+  color: var(--primary-text-color);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+  overflow: hidden;
+  outline: none;
+  animation: pg-rise .16s ease-out;
+}
+
+.pg-palette-input {
+  border: 0;
+  outline: 0;
+  padding: 16px 18px;
+  font-size: 1rem;
+  background: transparent;
+  color: var(--primary-text-color);
+  border-bottom: 1px solid var(--border-color);
+
+  &::placeholder {
+    color: var(--secondary-text-color);
+  }
+}
+
+.pg-list {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.pg-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+
+  &.is-active {
+    background: var(--light-secondary-text-color);
+  }
+
+  &-title {
+    flex: 1;
+  }
+
+  &-state {
+    color: var(--primary-color);
+    font-size: .875rem;
+  }
+
+  kbd {
+    font: inherit;
+    font-size: .8125rem;
+    color: var(--secondary-text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1px 6px;
+  }
+}
+
+.pg-empty {
+  padding: 16px 18px;
+  color: var(--secondary-text-color);
+}
+
+.pg-settings-title {
+  padding: 18px 18px 6px;
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-bold, 600);
+}
+
+.pg-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--light-secondary-text-color);
+  }
+
+  &-text {
+    flex: 1;
+  }
+
+  &-sub {
+    font-size: .875rem;
+    color: var(--secondary-text-color);
+  }
+}
+
+.pg-switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--secondary-text-color);
+  transition: background .18s;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .18s ease-out;
+  }
+
+  &.is-on {
+    background: var(--primary-color);
+
+    &::after {
+      transform: translateX(16px);
+    }
+  }
+}
+
+.pg-settings-hint {
+  padding: 10px 18px 18px;
+  font-size: .875rem;
+  color: var(--secondary-text-color);
+}
+
+@keyframes pg-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes pg-rise {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+}

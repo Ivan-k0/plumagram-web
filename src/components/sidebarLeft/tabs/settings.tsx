@@ -1,4 +1,5 @@
 import {createSignal, For, onCleanup, onMount, Show} from 'solid-js';
+import {openPlumaSettings} from '@/plumagram';
 import ButtonMenuToggle from '@components/buttonMenuToggle';
 import lottieLoader from '@lib/lottie/lottieLoader';
 import ButtonIcon from '@components/buttonIcon';
@@ -399,6 +400,10 @@ const Settings = () => {
           <Row clickable={() => tab.slider.createTab(hotReloadGuard.tabs.AppKeyboardShortcutsTab).open()}>
             <Row.Icon icon="keyboard_filled" />
             <Row.Title>{i18n('KeyboardShortcuts.Title')}</Row.Title>
+          </Row>
+          <Row clickable={() => openPlumaSettings()}>
+            <Row.Icon icon="lamp" />
+            <Row.Title>PlumaGram</Row.Title>
           </Row>
         </div>
       </Section>
