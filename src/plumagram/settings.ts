@@ -10,14 +10,17 @@ export type PlumaSettings = {
   /** «Не подглядывай!»: chat list and messages are blurred until hovered */
   noPeek: boolean,
   /** «Без рекламы»: no sponsored messages in channels and bots */
-  noAds: boolean
+  noAds: boolean,
+  /** «Не беспокоить»: no notifications and sounds in this tab until this moment (ms) */
+  quietUntil: number
 };
 
 const STORAGE_KEY = 'plumagram:settings';
 
 const DEFAULTS: PlumaSettings = {
   noPeek: false,
-  noAds: true
+  noAds: true,
+  quietUntil: 0
 };
 
 function load(): PlumaSettings {
@@ -52,4 +55,8 @@ export function togglePlumaSetting(key: 'noPeek' | 'noAds') {
 export function pt(ru: string, en: string) {
   const code = I18n.getLastRequestedLangCode() || document.documentElement.lang || navigator.language;
   return code?.toLowerCase().startsWith('ru') ? ru : en;
+}
+
+export function isQuietNow() {
+  return settingsSignal().quietUntil > Date.now();
 }

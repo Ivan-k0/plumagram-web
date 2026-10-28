@@ -1,4 +1,5 @@
 import tsNow from '@helpers/tsNow';
+import {pt} from '@/plumagram/settings';
 import {LangPackKey} from '@lib/langPack';
 import {MUTE_UNTIL} from '@appManagers/constants';
 import RadioFormTsx from '@components/radioFormTsx';
@@ -8,7 +9,14 @@ import {createComponent} from 'solid-js';
 import rootScope from '@lib/rootScope';
 
 const ONE_HOUR = 3600;
-const times: {value: number | string, langPackKey: LangPackKey, checked?: boolean}[] = [{
+const times: {value: number | string, langPackKey?: LangPackKey, text?: string, checked?: boolean}[] = [{
+  // * PlumaGram: a short quiet time for a chat
+  value: 15 * 60,
+  get text() { return pt('На 15 минут', 'For 15 Minutes'); }
+}, {
+  value: 30 * 60,
+  get text() { return pt('На 30 минут', 'For 30 Minutes'); }
+}, {
   value: ONE_HOUR,
   langPackKey: 'ChatList.Mute.1Hour'
 }, {

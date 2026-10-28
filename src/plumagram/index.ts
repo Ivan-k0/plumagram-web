@@ -5,7 +5,8 @@
 
 import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
-import {plumaSettings, pt, togglePlumaSetting} from '@/plumagram/settings';
+import appNavigationController, {NavigationItem} from '@components/appNavigationController';
+import {isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import '@/plumagram/plumagram.scss';
 
@@ -38,6 +39,93 @@ export function toggleNoAds() {
   toast(on ?
     pt('Реклама скрыта — в открытых заново чатах её не будет', 'Ads are hidden in chats opened from now on') :
     pt('Реклама снова показывается', 'Ads are shown again'));
+}
+
+function formatTime(ms: number) {
+  return new Date(ms).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+
+/** «Тихий режим» of the open chat: the mute window with short times on top (15 and 30 minutes) */
+async function muteOpenChat() {
+  const {default: appImManager} = await import('@lib/appImManager');
+  const chat = appImManager.chat;
+  if(!chat?.peerId) {
+    toast(pt('Сначала открой чат', 'Open a chat first'));
+    return;
+  }
+
+  const {default: showMutePopup} = await import('@components/popups/mute');
+  showMutePopup(chat.peerId, chat.threadId);
+}
+
+/** «Не беспокоить» на N минут: no notifications and sounds in this tab */
+function openQuietPicker() {
+  const panel = document.createElement('div');
+  panel.className = 'pg-panel';
+  panel.setAttribute('role', 'dialog');
+  panel.tabIndex = -1;
+
+  const title = document.createElement('div');
+  title.className = 'pg-settings-title';
+  title.textContent = isQuietNow() ?
+    pt(`Не беспокоить — до ${formatTime(plumaSettings().quietUntil)}`, `Do not disturb — until ${formatTime(plumaSettings().quietUntil)}`) :
+    pt('Не беспокоить', 'Do not disturb');
+
+  const list = document.createElement('div');
+  list.className = 'pg-list';
+
+  const options: {minutes: number, text: string}[] = [
+    {minutes: 15, text: pt('15 минут', '15 minutes')},
+    {minutes: 30, text: pt('30 минут', '30 minutes')},
+    {minutes: 60, text: pt('1 час', '1 hour')},
+    {minutes: 120, text: pt('2 часа', '2 hours')},
+    {minutes: 240, text: pt('4 часа', '4 hours')},
+    {minutes: 480, text: pt('8 часов', '8 hours')}
+  ];
+  if(isQuietNow()) {
+    options.push({minutes: 0, text: pt('Выключить', 'Turn off')});
+  }
+
+  options.forEach(({minutes, text}) => {
+    const item = document.createElement('div');
+    item.className = 'pg-item';
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    const label = document.createElement('span');
+    label.className = 'pg-item-title';
+    label.textContent = text;
+    item.append(label);
+
+    const choose = () => {
+      closeOverlay();
+      const until = minutes ? Date.now() + minutes * 60e3 : 0;
+      setPlumaSetting('quietUntil', until);
+      toast(until ?
+        pt(`Не беспокоить до ${formatTime(until)} — уведомлений и звуков не будет`, `Do not disturb until ${formatTime(until)} — no notifications or sounds`) :
+        pt('«Не беспокоить» выключено', 'Do not disturb is off'));
+    };
+    item.addEventListener('click', choose);
+    item.addEventListener('mouseenter', () => item.focus());
+    item.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        choose();
+      }
+    });
+    list.append(item);
+  });
+
+  list.addEventListener('keydown', (e) => {
+    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = Array.from(list.children) as HTMLElement[];
+    const idx = items.indexOf(document.activeElement as HTMLElement);
+    items[(idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
+  });
+
+  panel.append(title, list);
+  createOverlay(panel);
+  (list.firstElementChild as HTMLElement)?.focus();
 }
 
 async function openSavedMessages() {
@@ -77,6 +165,19 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'ads sponsored реклама спонсор',
   state: () => onOff(plumaSettings().noAds),
   run: toggleNoAds
+}, {
+  id: 'muteChat',
+  title: () => pt('Тихий режим этого чата…', 'Mute this chat for…'),
+  keywords: 'mute quiet silent тихий режим звук выключить заглушить',
+  hotkey: `${ALT}+M`,
+  run: muteOpenChat
+}, {
+  id: 'quiet',
+  title: () => pt('Не беспокоить…', 'Do not disturb…'),
+  keywords: 'quiet dnd do not disturb notifications не беспокоить уведомления тишина',
+  hotkey: `${ALT}+D`,
+  state: () => isQuietNow() ? pt(`до ${formatTime(plumaSettings().quietUntil)}`, `until ${formatTime(plumaSettings().quietUntil)}`) : onOff(false),
+  run: openQuietPicker
 }, {
   id: 'reply',
   title: () => pt('Ответить на сообщение под мышью', 'Reply to the message under the pointer'),
@@ -142,10 +243,16 @@ const ACTIONS: PaletteAction[] = [{
 }];
 
 let openOverlay: HTMLElement;
+let overlayNavigationItem: NavigationItem;
 
 function closeOverlay() {
   openOverlay?.remove();
   openOverlay = undefined;
+  if(overlayNavigationItem) {
+    const item = overlayNavigationItem;
+    overlayNavigationItem = undefined;
+    appNavigationController.removeItem(item);
+  }
 }
 
 function createOverlay(panel: HTMLElement) {
@@ -165,6 +272,14 @@ function createOverlay(panel: HTMLElement) {
   });
   document.body.append(overlay);
   openOverlay = overlay;
+  // * in the app's back stack, so Esc and «back» close our window first, not the chat under it
+  appNavigationController.pushItem(overlayNavigationItem = {
+    type: 'popup',
+    onPop: () => {
+      overlayNavigationItem = undefined;
+      closeOverlay();
+    }
+  });
   return overlay;
 }
 
@@ -319,9 +434,9 @@ export function openPlumaSettings() {
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
     `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести; ${ALT}+⇧+T — перевести весь чат`,
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить`,
     `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate; ${ALT}+⇧+T — translate the whole chat`
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb`
   );
 
   panel.append(
@@ -342,6 +457,14 @@ function isEditable(target: EventTarget) {
 
 function onKeyDown(e: KeyboardEvent) {
   const mod = IS_MAC ? e.metaKey : e.ctrlKey;
+
+  // * Esc closes our window wherever the focus is (otherwise it would close the chat under it)
+  if(openOverlay && e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    closeOverlay();
+    return;
+  }
 
   // * Ctrl+K: in a text field it keeps adding a link to the selected text; with nothing selected — the palette
   if(mod && !e.altKey && !e.shiftKey && e.code === 'KeyK') {
@@ -370,6 +493,13 @@ function onKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
     toggleNoPeek();
+    return;
+  }
+
+  if(e.code === 'KeyM' || e.code === 'KeyD') {
+    e.preventDefault();
+    e.stopPropagation();
+    e.code === 'KeyM' ? muteOpenChat() : openQuietPicker();
     return;
   }
 

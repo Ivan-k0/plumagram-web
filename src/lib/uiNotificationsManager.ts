@@ -1,4 +1,5 @@
 import type {PushNotificationObject} from '@lib/serviceWorker/push';
+import {isQuietNow} from '@/plumagram/settings';
 import {MOUNT_CLASS_TO} from '@config/debug';
 import getPeerTitle from '@components/wrappers/getPeerTitle';
 import wrapMessageForReply from '@components/wrappers/messageForReply';
@@ -944,6 +945,11 @@ export class UiNotificationsManager {
     this.log('notify', data, idleController.isIdle, this.notificationsUiSupport, this.stopped);
 
     if(this.stopped) {
+      return;
+    }
+
+    // * PlumaGram: «Не беспокоить» на N минут — no notification and no sound in this tab
+    if(isQuietNow()) {
       return;
     }
 
