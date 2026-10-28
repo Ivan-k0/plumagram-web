@@ -8,6 +8,7 @@ import {toast} from '@components/toast';
 import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker} from '@/plumagram/overlay';
+import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -223,6 +224,17 @@ const ACTIONS: PaletteAction[] = [{
   hotkey: `${ALT}+N`,
   run: () => runMessageHotkey('remind')
 }, {
+  id: 'hideSimilar',
+  title: () => pt('Скрывать похожие на сообщение под мышью…', 'Hide messages like the one under the pointer…'),
+  keywords: 'filter hide similar фильтр скрыть похожие',
+  hotkey: `${ALT}+X`,
+  run: hideSimilarToHovered
+}, {
+  id: 'filters',
+  title: () => pt('Фильтры сообщений', 'Message filters'),
+  keywords: 'filter filters rules фильтры правила скрытые',
+  run: openFiltersManager
+}, {
   id: 'pin',
   title: () => pt('Закрепить сообщение под мышью', 'Pin the message under the pointer'),
   keywords: 'pin unpin закрепить открепить',
@@ -433,13 +445,20 @@ export function openPlumaSettings() {
     return row;
   };
 
+  const filtersRow = document.createElement('div');
+  filtersRow.className = 'pg-settings-row';
+  filtersRow.tabIndex = 0;
+  filtersRow.setAttribute('role', 'button');
+  filtersRow.textContent = pt('Фильтры сообщений…', 'Message filters…');
+  filtersRow.addEventListener('click', openFiltersManager);
+
   const hint = document.createElement('div');
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
     `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка`,
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже, ${ALT}+X — скрывать похожие; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка`,
     `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note`
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later, ${ALT}+X — hide similar; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note`
   );
 
   panel.append(
@@ -447,6 +466,7 @@ export function openPlumaSettings() {
     makeRow('noPeek', pt('Не подглядывай!', 'No peeking!'), pt('Размывать список чатов и сообщения, открывать при наведении', 'Blur the chat list and messages, reveal on hover'), toggleNoPeek),
     makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
     makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
+    filtersRow,
     hint
   );
 
@@ -524,6 +544,7 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 const APP_HOTKEYS: {[code: string]: () => void} = {
+  KeyX: hideSimilarToHovered,
   KeyJ: jumpToLastNotification,
   KeyA: switchToNextAccount,
   KeyZ: openNote
@@ -540,6 +561,7 @@ const MESSAGE_HOTKEYS: {[code: string]: MessageHotkeyAction} = {
 
 export default function initPlumaGram() {
   window.addEventListener('keydown', onKeyDown, {capture: true});
+  initFilters();
 
   createRoot(() => {
     createEffect(() => {
