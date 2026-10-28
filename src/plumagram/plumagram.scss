@@ -24,6 +24,11 @@ body.pg-no-peek {
   }
 }
 
+// * reactions under channel posts are hidden (a channel's chat only, not forwarded posts in groups)
+body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
+  display: none;
+}
+
 // * command palette (Ctrl+K) and the PlumaGram settings window
 .pg-overlay {
   position: fixed;

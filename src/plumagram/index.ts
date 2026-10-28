@@ -5,9 +5,9 @@
 
 import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
-import appNavigationController, {NavigationItem} from '@components/appNavigationController';
 import {isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
+import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker} from '@/plumagram/overlay';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -60,72 +60,36 @@ async function muteOpenChat() {
 
 /** «Не беспокоить» на N минут: no notifications and sounds in this tab */
 function openQuietPicker() {
-  const panel = document.createElement('div');
-  panel.className = 'pg-panel';
-  panel.setAttribute('role', 'dialog');
-  panel.tabIndex = -1;
+  const quietFor = (minutes: number) => () => {
+    const until = minutes ? Date.now() + minutes * 60e3 : 0;
+    setPlumaSetting('quietUntil', until);
+    toast(until ?
+      pt(`Не беспокоить до ${formatTime(until)} — уведомлений и звуков не будет`, `Do not disturb until ${formatTime(until)} — no notifications or sounds`) :
+      pt('«Не беспокоить» выключено', 'Do not disturb is off'));
+  };
 
-  const title = document.createElement('div');
-  title.className = 'pg-settings-title';
-  title.textContent = isQuietNow() ?
-    pt(`Не беспокоить — до ${formatTime(plumaSettings().quietUntil)}`, `Do not disturb — until ${formatTime(plumaSettings().quietUntil)}`) :
-    pt('Не беспокоить', 'Do not disturb');
-
-  const list = document.createElement('div');
-  list.className = 'pg-list';
-
-  const options: {minutes: number, text: string}[] = [
-    {minutes: 15, text: pt('15 минут', '15 minutes')},
-    {minutes: 30, text: pt('30 минут', '30 minutes')},
-    {minutes: 60, text: pt('1 час', '1 hour')},
-    {minutes: 120, text: pt('2 часа', '2 hours')},
-    {minutes: 240, text: pt('4 часа', '4 hours')},
-    {minutes: 480, text: pt('8 часов', '8 hours')}
+  const options: ChoiceOption[] = [
+    {text: pt('15 минут', '15 minutes'), run: quietFor(15)},
+    {text: pt('30 минут', '30 minutes'), run: quietFor(30)},
+    {text: pt('1 час', '1 hour'), run: quietFor(60)},
+    {text: pt('2 часа', '2 hours'), run: quietFor(120)},
+    {text: pt('4 часа', '4 hours'), run: quietFor(240)},
+    {text: pt('8 часов', '8 hours'), run: quietFor(480)}
   ];
   if(isQuietNow()) {
-    options.push({minutes: 0, text: pt('Выключить', 'Turn off')});
+    options.push({text: pt('Выключить', 'Turn off'), run: quietFor(0)});
   }
 
-  options.forEach(({minutes, text}) => {
-    const item = document.createElement('div');
-    item.className = 'pg-item';
-    item.tabIndex = 0;
-    item.setAttribute('role', 'button');
-    const label = document.createElement('span');
-    label.className = 'pg-item-title';
-    label.textContent = text;
-    item.append(label);
+  openChoicePicker(isQuietNow() ?
+    pt(`Не беспокоить — до ${formatTime(plumaSettings().quietUntil)}`, `Do not disturb — until ${formatTime(plumaSettings().quietUntil)}`) :
+    pt('Не беспокоить', 'Do not disturb'), options);
+}
 
-    const choose = () => {
-      closeOverlay();
-      const until = minutes ? Date.now() + minutes * 60e3 : 0;
-      setPlumaSetting('quietUntil', until);
-      toast(until ?
-        pt(`Не беспокоить до ${formatTime(until)} — уведомлений и звуков не будет`, `Do not disturb until ${formatTime(until)} — no notifications or sounds`) :
-        pt('«Не беспокоить» выключено', 'Do not disturb is off'));
-    };
-    item.addEventListener('click', choose);
-    item.addEventListener('mouseenter', () => item.focus());
-    item.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        choose();
-      }
-    });
-    list.append(item);
-  });
-
-  list.addEventListener('keydown', (e) => {
-    if(e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-    e.preventDefault();
-    const items = Array.from(list.children) as HTMLElement[];
-    const idx = items.indexOf(document.activeElement as HTMLElement);
-    items[(idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus();
-  });
-
-  panel.append(title, list);
-  createOverlay(panel);
-  (list.firstElementChild as HTMLElement)?.focus();
+export function toggleChannelReactions() {
+  const on = togglePlumaSetting('hideChannelReactions');
+  toast(on ?
+    pt('Реакции в каналах скрыты', 'Reactions in channels are hidden') :
+    pt('Реакции в каналах снова видны', 'Reactions in channels are shown again'));
 }
 
 async function openSavedMessages() {
@@ -166,6 +130,12 @@ const ACTIONS: PaletteAction[] = [{
   state: () => onOff(plumaSettings().noAds),
   run: toggleNoAds
 }, {
+  id: 'hideChannelReactions',
+  title: () => pt('Скрыть реакции в каналах', 'Hide reactions in channels'),
+  keywords: 'reactions channels реакции каналы скрыть',
+  state: () => onOff(plumaSettings().hideChannelReactions),
+  run: toggleChannelReactions
+}, {
   id: 'muteChat',
   title: () => pt('Тихий режим этого чата…', 'Mute this chat for…'),
   keywords: 'mute quiet silent тихий режим звук выключить заглушить',
@@ -196,6 +166,12 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'save saved store хранилище избранное сохранить',
   hotkey: `${ALT}+S`,
   run: () => runMessageHotkey('saved')
+}, {
+  id: 'remind',
+  title: () => pt('Напомнить позже о сообщении под мышью…', 'Remind me later about the message under the pointer…'),
+  keywords: 'remind reminder later напомнить напоминание позже',
+  hotkey: `${ALT}+N`,
+  run: () => runMessageHotkey('remind')
 }, {
   id: 'pin',
   title: () => pt('Закрепить сообщение под мышью', 'Pin the message under the pointer'),
@@ -241,47 +217,6 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'plumagram magix фишки features',
   run: () => openPlumaSettings()
 }];
-
-let openOverlay: HTMLElement;
-let overlayNavigationItem: NavigationItem;
-
-function closeOverlay() {
-  openOverlay?.remove();
-  openOverlay = undefined;
-  if(overlayNavigationItem) {
-    const item = overlayNavigationItem;
-    overlayNavigationItem = undefined;
-    appNavigationController.removeItem(item);
-  }
-}
-
-function createOverlay(panel: HTMLElement) {
-  closeOverlay();
-  const overlay = document.createElement('div');
-  overlay.className = 'pg-overlay';
-  overlay.append(panel);
-  overlay.addEventListener('mousedown', (e) => {
-    if(e.target === overlay) closeOverlay();
-  });
-  overlay.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      closeOverlay();
-    }
-  });
-  document.body.append(overlay);
-  openOverlay = overlay;
-  // * in the app's back stack, so Esc and «back» close our window first, not the chat under it
-  appNavigationController.pushItem(overlayNavigationItem = {
-    type: 'popup',
-    onPop: () => {
-      overlayNavigationItem = undefined;
-      closeOverlay();
-    }
-  });
-  return overlay;
-}
 
 export function openCommandPalette() {
   const panel = document.createElement('div');
@@ -389,7 +324,7 @@ export function openPlumaSettings() {
   title.className = 'pg-settings-title';
   title.textContent = 'PlumaGram';
 
-  const makeRow = (key: 'noPeek' | 'noAds', text: string, sub: string, toggle: () => void) => {
+  const makeRow = (key: 'noPeek' | 'noAds' | 'hideChannelReactions', text: string, sub: string, toggle: () => void) => {
     const row = document.createElement('div');
     row.className = 'pg-settings-row';
     row.setAttribute('role', 'switch');
@@ -434,15 +369,16 @@ export function openPlumaSettings() {
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
     `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить`,
+    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить`,
     `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb`
+    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb`
   );
 
   panel.append(
     title,
     makeRow('noPeek', pt('Не подглядывай!', 'No peeking!'), pt('Размывать список чатов и сообщения, открывать при наведении', 'Blur the chat list and messages, reveal on hover'), toggleNoPeek),
     makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
+    makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
     hint
   );
 
@@ -459,7 +395,7 @@ function onKeyDown(e: KeyboardEvent) {
   const mod = IS_MAC ? e.metaKey : e.ctrlKey;
 
   // * Esc closes our window wherever the focus is (otherwise it would close the chat under it)
-  if(openOverlay && e.key === 'Escape') {
+  if(isOverlayOpen() && e.key === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
     closeOverlay();
@@ -473,7 +409,7 @@ function onKeyDown(e: KeyboardEvent) {
     if(isEditable(e.target) && hasSelection) return;
     e.preventDefault();
     e.stopPropagation();
-    if(openOverlay) closeOverlay();
+    if(isOverlayOpen()) closeOverlay();
     else openCommandPalette();
     return;
   }
@@ -516,7 +452,8 @@ const MESSAGE_HOTKEYS: {[code: string]: MessageHotkeyAction} = {
   KeyF: 'forward',
   KeyS: 'saved',
   KeyP: 'pin',
-  KeyT: 'translate'
+  KeyT: 'translate',
+  KeyN: 'remind'
 };
 
 export default function initPlumaGram() {
@@ -525,6 +462,7 @@ export default function initPlumaGram() {
   createRoot(() => {
     createEffect(() => {
       document.body.classList.toggle('pg-no-peek', plumaSettings().noPeek);
+      document.body.classList.toggle('pg-hide-channel-reactions', plumaSettings().hideChannelReactions);
     });
   });
 

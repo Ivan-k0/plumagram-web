@@ -11,6 +11,8 @@ export type PlumaSettings = {
   noPeek: boolean,
   /** «Без рекламы»: no sponsored messages in channels and bots */
   noAds: boolean,
+  /** reactions under channel posts are not shown */
+  hideChannelReactions: boolean,
   /** «Не беспокоить»: no notifications and sounds in this tab until this moment (ms) */
   quietUntil: number,
   /** the video quality picked last time (480 / 720 / 1080), 0 — «Авто» */
@@ -22,6 +24,7 @@ const STORAGE_KEY = 'plumagram:settings';
 const DEFAULTS: PlumaSettings = {
   noPeek: false,
   noAds: true,
+  hideChannelReactions: false,
   quietUntil: 0,
   videoQuality: 0
 };
@@ -49,7 +52,7 @@ export function setPlumaSetting<K extends keyof PlumaSettings>(key: K, value: Pl
   } catch(err) {}
 }
 
-export function togglePlumaSetting(key: 'noPeek' | 'noAds') {
+export function togglePlumaSetting(key: 'noPeek' | 'noAds' | 'hideChannelReactions') {
   setPlumaSetting(key, !settingsSignal()[key]);
   return settingsSignal()[key];
 }
