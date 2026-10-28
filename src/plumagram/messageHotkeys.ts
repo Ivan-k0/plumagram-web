@@ -5,6 +5,7 @@
 
 import {toast} from '@components/toast';
 import {pt} from '@/plumagram/settings';
+import {getTargetBubble} from '@/plumagram/target';
 import {openChoicePicker} from '@/plumagram/overlay';
 import type {Message} from '@layer';
 
@@ -16,13 +17,8 @@ async function getChat() {
 }
 
 /** The message bubble under the pointer in the open chat */
-function getHoveredBubble() {
-  const hovered = document.querySelectorAll<HTMLElement>('.bubbles-inner .bubble[data-mid]:hover');
-  return hovered[hovered.length - 1];
-}
-
 export async function runMessageHotkey(action: MessageHotkeyAction) {
-  const bubble = getHoveredBubble();
+  const bubble = getTargetBubble();
   if(!bubble) {
     toast(pt('Наведи мышь на сообщение', 'Point at a message first'));
     return;

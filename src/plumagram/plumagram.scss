@@ -133,6 +133,11 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
     flex: 1;
   }
 
+  &-target {
+    margin-inline-start: 8px;
+    color: var(--secondary-text-color);
+  }
+
   &-state {
     color: var(--primary-color);
     font-size: .875rem;

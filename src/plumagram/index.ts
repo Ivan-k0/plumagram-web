@@ -10,10 +10,13 @@ import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/pl
 import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import {openStorage, tagHoveredSavedMessage} from '@/plumagram/storage';
+import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
   id: string,
+  /** acts on a message: shown only when there is one (under the pointer or hovered last), named by its words */
+  onMessage?: boolean,
   title: () => string,
   keywords?: string,
   hotkey?: string,
@@ -22,8 +25,10 @@ type PaletteAction = {
 };
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
-const MOD = IS_MAC ? '⌘' : 'Ctrl';
-const ALT = IS_MAC ? '⌥' : 'Alt';
+// * on a Mac keys go together without a plus (⌥H, ⌘K), as the system writes them
+const MOD = IS_MAC ? '⌘' : 'Ctrl+';
+const ALT = IS_MAC ? '⌥' : 'Alt+';
+const SHIFT = IS_MAC ? '⇧' : 'Shift+';
 
 function onOff(value: boolean) {
   return value ? pt('вкл', 'on') : pt('выкл', 'off');
@@ -172,7 +177,7 @@ const ACTIONS: PaletteAction[] = [{
   id: 'noPeek',
   title: () => pt('Не подглядывай! (размыть чаты)', 'No peeking! (blur chats)'),
   keywords: 'blur privacy hide размыть скрыть приватность',
-  hotkey: `${ALT}+H`,
+  hotkey: `${ALT}H`,
   state: () => onOff(plumaSettings().noPeek),
   run: toggleNoPeek
 }, {
@@ -191,44 +196,49 @@ const ACTIONS: PaletteAction[] = [{
   id: 'muteChat',
   title: () => pt('Тихий режим этого чата…', 'Mute this chat for…'),
   keywords: 'mute quiet silent тихий режим звук выключить заглушить',
-  hotkey: `${ALT}+M`,
+  hotkey: `${ALT}M`,
   run: muteOpenChat
 }, {
   id: 'quiet',
   title: () => pt('Не беспокоить…', 'Do not disturb…'),
   keywords: 'quiet dnd do not disturb notifications не беспокоить уведомления тишина',
-  hotkey: `${ALT}+D`,
+  hotkey: `${ALT}D`,
   state: () => isQuietNow() ? pt(`до ${formatTime(plumaSettings().quietUntil)}`, `until ${formatTime(plumaSettings().quietUntil)}`) : onOff(false),
   run: openQuietPicker
 }, {
   id: 'reply',
-  title: () => pt('Ответить на сообщение под мышью', 'Reply to the message under the pointer'),
+  onMessage: true,
+  title: () => pt('Ответить', 'Reply'),
   keywords: 'reply ответ ответить',
-  hotkey: `${ALT}+R`,
+  hotkey: `${ALT}R`,
   run: () => runMessageHotkey('reply')
 }, {
   id: 'forward',
-  title: () => pt('Переслать сообщение под мышью', 'Forward the message under the pointer'),
+  onMessage: true,
+  title: () => pt('Переслать', 'Forward'),
   keywords: 'forward переслать',
-  hotkey: `${ALT}+F`,
+  hotkey: `${ALT}F`,
   run: () => runMessageHotkey('forward')
 }, {
   id: 'toSaved',
-  title: () => pt('Сообщение под мышью — в Избранное', 'Message under the pointer to Saved Messages'),
+  onMessage: true,
+  title: () => pt('Сохранить в Избранное', 'Save to Saved Messages'),
   keywords: 'save saved store хранилище избранное сохранить',
-  hotkey: `${ALT}+S`,
+  hotkey: `${ALT}S`,
   run: () => runMessageHotkey('saved')
 }, {
   id: 'remind',
-  title: () => pt('Напомнить позже о сообщении под мышью…', 'Remind me later about the message under the pointer…'),
+  onMessage: true,
+  title: () => pt('Напомнить позже…', 'Remind me later…'),
   keywords: 'remind reminder later напомнить напоминание позже',
-  hotkey: `${ALT}+N`,
+  hotkey: `${ALT}N`,
   run: () => runMessageHotkey('remind')
 }, {
   id: 'hideSimilar',
-  title: () => pt('Скрывать похожие на сообщение под мышью…', 'Hide messages like the one under the pointer…'),
+  onMessage: true,
+  title: () => pt('Скрывать похожие…', 'Hide similar messages…'),
   keywords: 'filter hide similar фильтр скрыть похожие',
-  hotkey: `${ALT}+X`,
+  hotkey: `${ALT}X`,
   run: hideSimilarToHovered
 }, {
   id: 'filters',
@@ -237,57 +247,60 @@ const ACTIONS: PaletteAction[] = [{
   run: openFiltersManager
 }, {
   id: 'pin',
-  title: () => pt('Закрепить сообщение под мышью', 'Pin the message under the pointer'),
+  onMessage: true,
+  title: () => pt('Закрепить', 'Pin'),
   keywords: 'pin unpin закрепить открепить',
-  hotkey: `${ALT}+P`,
+  hotkey: `${ALT}P`,
   run: () => runMessageHotkey('pin')
 }, {
   id: 'translate',
-  title: () => pt('Перевести сообщение под мышью', 'Translate the message under the pointer'),
+  onMessage: true,
+  title: () => pt('Перевести', 'Translate'),
   keywords: 'translate перевод перевести',
-  hotkey: `${ALT}+T`,
+  hotkey: `${ALT}T`,
   run: () => runMessageHotkey('translate')
 }, {
   id: 'translateChat',
   title: () => pt('Перевести весь чат', 'Translate the whole chat'),
   keywords: 'translate chat перевод перевести чат весь',
-  hotkey: `${ALT}+⇧+T`,
+  hotkey: `${ALT}${SHIFT}T`,
   run: () => toggleChatTranslation()
 }, {
   id: 'lastNotification',
   title: () => pt('Последнее уведомление и обратно', 'Last notification and back'),
   keywords: 'notification last jump back уведомление последнее назад обратно',
-  hotkey: `${ALT}+J`,
+  hotkey: `${ALT}J`,
   run: jumpToLastNotification
 }, {
   id: 'nextAccount',
   title: () => pt('Следующий аккаунт', 'Next account'),
   keywords: 'account switch аккаунт сменить переключить',
-  hotkey: `${ALT}+A`,
+  hotkey: `${ALT}A`,
   run: switchToNextAccount
 }, {
   id: 'note',
   title: () => pt('Заметка (в Избранное)', 'Note (to Saved Messages)'),
   keywords: 'note заметка записать memo',
-  hotkey: `${ALT}+Z`,
+  hotkey: `${ALT}Z`,
   run: openNote
 }, {
   id: 'storage',
   title: () => pt('Хранилище', 'Storage'),
   keywords: 'storage tags saved хранилище метки избранное теги',
-  hotkey: `${ALT}+B`,
+  hotkey: `${ALT}B`,
   run: openStorage
 }, {
   id: 'tagSaved',
-  title: () => pt('Поставить метку на своё сообщение в Избранном', 'Tag your message in Saved Messages'),
+  onMessage: true,
+  title: () => pt('Поставить метку (своё сообщение в Избранном)…', 'Add a tag (your message in Saved)…'),
   keywords: 'tag hashtag метка хэштег хранилище',
-  hotkey: `${ALT}+3`,
+  hotkey: `${ALT}3`,
   run: tagHoveredSavedMessage
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
   keywords: 'saved favorites избранное заметка note',
-  hotkey: `${MOD}+0`,
+  hotkey: `${MOD}0`,
   run: openSavedMessages
 }, {
   id: 'search',
@@ -338,7 +351,9 @@ export function openCommandPalette() {
 
   const render = () => {
     const query = input.value.trim().toLowerCase();
+    const snippet = getTargetSnippet();
     filtered = ACTIONS.filter((action) => {
+      if(action.onMessage && !snippet) return false;
       if(!query) return true;
       const haystack = (action.title() + ' ' + (action.keywords || '')).toLowerCase();
       return query.split(/\s+/).every((word) => haystack.includes(word));
@@ -354,6 +369,13 @@ export function openCommandPalette() {
       title.className = 'pg-item-title';
       title.textContent = action.title();
       item.append(title);
+
+      if(action.onMessage) {
+        const target = document.createElement('span');
+        target.className = 'pg-item-target';
+        target.textContent = `«${snippet}»`;
+        title.append(target);
+      }
 
       if(action.state) {
         const state = document.createElement('span');
@@ -468,10 +490,10 @@ export function openPlumaSettings() {
   const hint = document.createElement('div');
   hint.className = 'pg-settings-hint';
   hint.textContent = pt(
-    `${MOD}+K — все действия по названию · ${ALT}+H — «Не подглядывай!» · ${MOD}+0 — Избранное. ` +
-    `Сообщение под мышью: ${ALT}+R — ответить, ${ALT}+F — переслать, ${ALT}+S — в Избранное, ${ALT}+P — закрепить, ${ALT}+T — перевести, ${ALT}+N — напомнить позже, ${ALT}+X — скрывать похожие; ${ALT}+⇧+T — перевести весь чат. ${ALT}+M — тихий режим чата, ${ALT}+D — не беспокоить. ${ALT}+J — последнее уведомление и обратно, ${ALT}+A — следующий аккаунт, ${ALT}+Z — заметка, ${ALT}+B — Хранилище, ${ALT}+3 — метка на своё сообщение в Избранном`,
-    `${MOD}+K — every action by name · ${ALT}+H — «No peeking!» · ${MOD}+0 — Saved Messages. ` +
-    `Message under the pointer: ${ALT}+R — reply, ${ALT}+F — forward, ${ALT}+S — to Saved, ${ALT}+P — pin, ${ALT}+T — translate, ${ALT}+N — remind me later, ${ALT}+X — hide similar; ${ALT}+⇧+T — translate the whole chat. ${ALT}+M — mute the chat, ${ALT}+D — do not disturb. ${ALT}+J — last notification and back, ${ALT}+A — next account, ${ALT}+Z — note, ${ALT}+B — storage, ${ALT}+3 — tag your message in Saved`
+    `${MOD}K — все действия по названию · ${ALT}H — «Не подглядывай!» · ${MOD}0 — Избранное. ` +
+    `Сообщение под мышью: ${ALT}R — ответить, ${ALT}F — переслать, ${ALT}S — в Избранное, ${ALT}P — закрепить, ${ALT}T — перевести, ${ALT}N — напомнить позже, ${ALT}X — скрывать похожие; ${ALT}${SHIFT}T — перевести весь чат. ${ALT}M — тихий режим чата, ${ALT}D — не беспокоить. ${ALT}J — последнее уведомление и обратно, ${ALT}A — следующий аккаунт, ${ALT}Z — заметка, ${ALT}B — Хранилище, ${ALT}3 — метка на своё сообщение в Избранном`,
+    `${MOD}K — every action by name · ${ALT}H — «No peeking!» · ${MOD}0 — Saved Messages. ` +
+    `Message under the pointer: ${ALT}R — reply, ${ALT}F — forward, ${ALT}S — to Saved, ${ALT}P — pin, ${ALT}T — translate, ${ALT}N — remind me later, ${ALT}X — hide similar; ${ALT}${SHIFT}T — translate the whole chat. ${ALT}M — mute the chat, ${ALT}D — do not disturb. ${ALT}J — last notification and back, ${ALT}A — next account, ${ALT}Z — note, ${ALT}B — storage, ${ALT}3 — tag your message in Saved`
   );
 
   panel.append(
@@ -576,6 +598,7 @@ const MESSAGE_HOTKEYS: {[code: string]: MessageHotkeyAction} = {
 
 export default function initPlumaGram() {
   window.addEventListener('keydown', onKeyDown, {capture: true});
+  initMessageTarget();
   initFilters();
 
   createRoot(() => {

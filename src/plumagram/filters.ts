@@ -5,6 +5,7 @@
  */
 
 import {pt} from '@/plumagram/settings';
+import {getTargetBubble} from '@/plumagram/target';
 import {createOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 
 export const SCOPE_ALL = 0, SCOPE_CHANNELS = 1, SCOPE_CHANNELS_GROUPS = 2, SCOPE_CHAT = 3;
@@ -162,8 +163,7 @@ function scopeText(rule: FilterRule) {
 
 /** «Скрыть похожие…»: a rule from the first line of the message under the pointer */
 export async function hideSimilarToHovered() {
-  const hovered = document.querySelectorAll<HTMLElement>('.bubbles-inner .bubble[data-mid]:hover');
-  const bubble = hovered[hovered.length - 1];
+  const bubble = getTargetBubble();
   const {toast} = await import('@components/toast');
   if(!bubble) {
     toast(pt('Наведи мышь на сообщение', 'Point at a message first'));

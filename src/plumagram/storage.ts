@@ -8,6 +8,7 @@ import {toast} from '@components/toast';
 import rootScope from '@lib/rootScope';
 import {bindManagersToSession} from '@lib/accounts/bindManagersToAccount';
 import {pt} from '@/plumagram/settings';
+import {getTargetBubble} from '@/plumagram/target';
 import {ChoiceOption, createOverlay, closeOverlay, openChoicePicker, focusSoon} from '@/plumagram/overlay';
 import type {Message} from '@layer';
 
@@ -122,8 +123,7 @@ export function openStorage() {
 
 /** A #tag added to the text of an own message in Saved Messages (under the pointer) */
 export async function tagHoveredSavedMessage() {
-  const hovered = document.querySelectorAll<HTMLElement>('.bubbles-inner .bubble[data-mid]:hover');
-  const bubble = hovered[hovered.length - 1];
+  const bubble = getTargetBubble();
   const {default: appImManager} = await import('@lib/appImManager');
   const chat = appImManager.chat;
   if(!bubble || chat?.peerId !== appImManager.myId) {
