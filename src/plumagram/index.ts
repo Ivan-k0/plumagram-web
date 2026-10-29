@@ -12,6 +12,7 @@ import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram
 import {initServiceFileLine, openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import {initThemes, openThemePicker} from '@/plumagram/themes';
+import {exportSettings, importSettings} from '@/plumagram/settingsTransfer';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -553,6 +554,18 @@ export function openPlumaSettings() {
   themesRow.textContent = pt('Тема как в приложении…', 'Theme as in the app…');
   themesRow.addEventListener('click', () => openThemePicker(openPlumaSettings));
 
+  const transferRow = document.createElement('div');
+  transferRow.className = 'pg-settings-row';
+  const saveButton = document.createElement('button');
+  saveButton.className = 'pg-storage-tag';
+  saveButton.textContent = pt('Сохранить настройки в файл', 'Save settings to a file');
+  saveButton.addEventListener('click', exportSettings);
+  const loadButton = document.createElement('button');
+  loadButton.className = 'pg-storage-tag';
+  loadButton.textContent = pt('Загрузить из файла', 'Load from a file');
+  loadButton.addEventListener('click', importSettings);
+  transferRow.append(saveButton, loadButton);
+
   const hotkeysRow = document.createElement('div');
   hotkeysRow.className = 'pg-settings-row';
   hotkeysRow.tabIndex = 0;
@@ -568,7 +581,8 @@ export function openPlumaSettings() {
     makeRow('transcribeAccurate', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
     themesRow,
     filtersRow,
-    hotkeysRow
+    hotkeysRow,
+    transferRow
   );
 
   createOverlay(panel);
