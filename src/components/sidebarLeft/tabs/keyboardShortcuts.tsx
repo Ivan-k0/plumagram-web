@@ -1,4 +1,6 @@
 import {createResource, createSignal, For, Show, JSX} from 'solid-js';
+import {openPlumaHotkeys} from '@/plumagram';
+import {pt} from '@/plumagram/settings';
 import Row from '@components/rowTsx';
 import Section from '@components/section';
 import I18n, {i18n, LangPackKey} from '@lib/langPack';
@@ -282,8 +284,19 @@ const OtherSection = () => {
   );
 };
 
+// * PlumaGram: our own shortcuts are looked for here too — a row that opens their list
+const PlumaShortcutsSection = () => (
+  <Section>
+    <Row clickable={() => openPlumaHotkeys()}>
+      <Row.Icon icon="lamp" />
+      <Row.Title>{pt('Сочетания PlumaGram…', 'PlumaGram shortcuts…')}</Row.Title>
+    </Row>
+  </Section>
+);
+
 const KeyboardShortcutsTab = () => (
   <>
+    <PlumaShortcutsSection />
     <FormattingSection />
     <MessagesSection />
     <ChatSection />

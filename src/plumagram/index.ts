@@ -470,7 +470,11 @@ export function openCommandPalette() {
   focusSoon(input);
 }
 
-/** Every PlumaGram shortcut, in groups, one per line */
+/** Every PlumaGram shortcut, in groups, one per line (also from Web K's own «Сочетания клавиш») */
+export function openPlumaHotkeys() {
+  openHotkeysList();
+}
+
 function openHotkeysList() {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';

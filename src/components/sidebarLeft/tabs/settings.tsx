@@ -377,6 +377,11 @@ const Settings = () => {
       {peerProfileElement}
       <Section>
         <div class="profile-buttons">
+          {/* PlumaGram: our settings first, as MagiX in the app (at the bottom it was not found) */}
+          <Row clickable={() => openPlumaSettings()}>
+            <Row.Icon icon="lamp" />
+            <Row.Title>PlumaGram</Row.Title>
+          </Row>
           <For each={subTabConfigs}>
             {(item) => (
               <Row clickable={onSubTabClick(item)}>
@@ -400,10 +405,6 @@ const Settings = () => {
           <Row clickable={() => tab.slider.createTab(hotReloadGuard.tabs.AppKeyboardShortcutsTab).open()}>
             <Row.Icon icon="keyboard_filled" />
             <Row.Title>{i18n('KeyboardShortcuts.Title')}</Row.Title>
-          </Row>
-          <Row clickable={() => openPlumaSettings()}>
-            <Row.Icon icon="lamp" />
-            <Row.Title>PlumaGram</Row.Title>
           </Row>
         </div>
       </Section>
