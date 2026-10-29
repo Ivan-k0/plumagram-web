@@ -13,6 +13,7 @@ import {initServiceFileLine, openStorage, putHoveredIntoFolder, tagHoveredSavedM
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import {initThemes, openThemePicker} from '@/plumagram/themes';
 import {exportSettings, importSettings} from '@/plumagram/settingsTransfer';
+import {openComposeHelper, openWhatIMissed} from '@/plumagram/ai';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -323,6 +324,17 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'folder папка хранилище положить',
   hotkey: `${ALT}4`,
   run: putHoveredIntoFolder
+}, {
+  id: 'aiHelper',
+  title: () => pt('ИИ-помощник для набранного сообщения…', 'AI helper for the typed message…'),
+  keywords: 'ai ии помощник исправить ошибки эмодзи короче перевести proofread',
+  hotkey: `${ALT}I`,
+  run: openComposeHelper
+}, {
+  id: 'whatIMissed',
+  title: () => pt('✨ Что пропустил в этом чате', '✨ What I missed in this chat'),
+  keywords: 'ai ии пропустил кратко пересказ summary missed непрочитанные',
+  run: openWhatIMissed
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
@@ -712,6 +724,7 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 const APP_HOTKEYS: {[code: string]: () => void} = {
+  KeyI: openComposeHelper,
   KeyB: openStorage,
   Digit3: tagHoveredSavedMessage,
   Digit4: putHoveredIntoFolder,

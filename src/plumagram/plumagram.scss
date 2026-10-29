@@ -393,6 +393,12 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
   }
 }
 
+.pg-ai-body {
+  padding: 8px 18px 14px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
 @keyframes pg-fade-in {
   from { opacity: 0; }
 }

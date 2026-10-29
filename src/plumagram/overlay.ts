@@ -4,6 +4,7 @@
 
 import appNavigationController, {NavigationItem} from '@components/appNavigationController';
 import Icon from '@components/icon';
+import overlayCounter from '@helpers/overlayCounter';
 
 let openOverlay: HTMLElement;
 let overlayNavigationItem: NavigationItem;
@@ -13,7 +14,11 @@ export function isOverlayOpen() {
 }
 
 export function closeOverlay() {
-  if(openOverlay) (document.activeElement as HTMLElement)?.blur?.();
+  if(openOverlay) {
+    (document.activeElement as HTMLElement)?.blur?.();
+    // * a tick later: the Enter that chose an item is still on its way up to the app's «type anywhere»
+    setTimeout(() => overlayCounter.isOverlayActive = false, 0);
+  }
   openOverlay?.remove();
   openOverlay = undefined;
   if(overlayNavigationItem) {
@@ -79,6 +84,9 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?:
   });
   document.body.append(overlay);
   openOverlay = overlay;
+  // * counted as the app's own popups are: while it is open, keys are not «typed anywhere» into the message
+  // * field — Enter on a choice of ours also sent the draft of the chat under it
+  overlayCounter.isOverlayActive = true;
   placePanel(overlay, panel, anchor);
 
   // * while our window is open the focus stays in it: the app gives it back to the message field when the
