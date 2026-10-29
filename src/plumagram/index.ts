@@ -36,6 +36,24 @@ function onOff(value: boolean) {
   return value ? pt('вкл', 'on') : pt('выкл', 'off');
 }
 
+// * while «Не подглядывай!» is on, a small mark in the corner says so and turns it off (pressed by chance,
+// * a blurred screen with no word of why)
+let noPeekBadge: HTMLElement;
+function toggleNoPeekBadge(on: boolean) {
+  if(!on) {
+    noPeekBadge?.remove();
+    noPeekBadge = undefined;
+    return;
+  }
+  if(noPeekBadge) return;
+  noPeekBadge = document.createElement('button');
+  noPeekBadge.className = 'pg-no-peek-badge';
+  noPeekBadge.textContent = pt(`Не подглядывай · ${ALT}H`, `No peeking · ${ALT}H`);
+  noPeekBadge.title = pt('Выключить', 'Turn off');
+  noPeekBadge.addEventListener('click', toggleNoPeek);
+  document.body.append(noPeekBadge);
+}
+
 export function toggleNoPeek() {
   const on = togglePlumaSetting('noPeek');
   toast(on ?
@@ -722,6 +740,7 @@ export default function initPlumaGram() {
   createRoot(() => {
     createEffect(() => {
       document.body.classList.toggle('pg-no-peek', plumaSettings().noPeek);
+      toggleNoPeekBadge(plumaSettings().noPeek);
       document.body.classList.toggle('pg-hide-channel-reactions', plumaSettings().hideChannelReactions);
     });
   });

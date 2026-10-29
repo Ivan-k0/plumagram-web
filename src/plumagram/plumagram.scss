@@ -59,6 +59,29 @@ body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
   max-width: 90%;
 }
 
+.pg-no-peek-badge {
+  // * bottom left, over the chat list: in the middle it lay on the message field
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 9000;
+  border: 0;
+  border-radius: 14px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: .8125rem;
+  color: #fff;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  opacity: .75;
+  transition: opacity .15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
 // * command palette (Ctrl+K) and the PlumaGram settings window
 .pg-overlay {
   position: fixed;
