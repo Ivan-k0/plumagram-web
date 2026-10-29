@@ -560,7 +560,7 @@ export function openPlumaSettings() {
 
   const title = makeTitle('PlumaGram');
 
-  const makeRow = (key: 'noPeek' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate', text: string, sub: string, toggle: () => void) => {
+  const makeRow = (key: 'noPeek' | 'noPeekBars' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate', text: string, sub: string, toggle: () => void) => {
     const row = document.createElement('div');
     row.className = 'pg-settings-row';
     row.setAttribute('role', 'switch');
@@ -637,6 +637,7 @@ export function openPlumaSettings() {
   panel.append(
     title,
     makeRow('noPeek', pt('Не подглядывай!', 'No peeking!'), pt('Размывать список чатов и сообщения, открывать при наведении', 'Blur the chat list and messages, reveal on hover'), toggleNoPeek),
+    makeRow('noPeekBars', pt('…чёрными полосами вместо размытия', '…as black bars instead of the blur'), pt('Как в секретных документах. Быстрее на слабом компьютере', 'Like a declassified document. Faster on a weak computer'), () => togglePlumaSetting('noPeekBars')),
     makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
     makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
     makeRow('transcribeAccurate', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
@@ -753,6 +754,7 @@ export default function initPlumaGram() {
   createRoot(() => {
     createEffect(() => {
       document.body.classList.toggle('pg-no-peek', plumaSettings().noPeek);
+      document.body.classList.toggle('pg-peek-bars', plumaSettings().noPeekBars);
       toggleNoPeekBadge(plumaSettings().noPeek);
       document.body.classList.toggle('pg-hide-channel-reactions', plumaSettings().hideChannelReactions);
     });

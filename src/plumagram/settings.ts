@@ -9,6 +9,8 @@ import I18n from '@lib/langPack';
 export type PlumaSettings = {
   /** «Не подглядывай!»: chat list and messages are blurred until hovered */
   noPeek: boolean,
+  /** «Не подглядывай!» as black bars instead of the blur (lighter on a weak computer) */
+  noPeekBars: boolean,
   /** «Без рекламы»: no sponsored messages in channels and bots */
   noAds: boolean,
   /** reactions under channel posts are not shown */
@@ -29,6 +31,7 @@ const STORAGE_KEY = 'plumagram:settings';
 
 const DEFAULTS: PlumaSettings = {
   noPeek: false,
+  noPeekBars: false,
   noAds: true,
   hideChannelReactions: false,
   quietUntil: 0,
@@ -61,7 +64,7 @@ export function setPlumaSetting<K extends keyof PlumaSettings>(key: K, value: Pl
   } catch(err) {}
 }
 
-export function togglePlumaSetting(key: 'noPeek' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate') {
+export function togglePlumaSetting(key: 'noPeek' | 'noPeekBars' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate') {
   setPlumaSetting(key, !settingsSignal()[key]);
   return settingsSignal()[key];
 }

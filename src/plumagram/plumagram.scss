@@ -24,6 +24,72 @@ body.pg-no-peek {
   }
 }
 
+// * «Не подглядывай!» as black bars, like a declassified document: far lighter than the blur on a weak computer
+// * (the blur makes every row a filtered layer). Lines of text are bars, pictures are black; under the pointer, as is
+body.pg-no-peek.pg-peek-bars {
+  .chatlist-chat,
+  .bubbles-inner .bubble .bubble-content,
+  .bubbles-inner .bubble .avatar,
+  .bubbles-group-avatar-container,
+  .chat-info .content,
+  .chat-info .avatar,
+  .pinned-message {
+    filter: none;
+  }
+
+  .chatlist-chat:not(:hover) {
+    .user-title,
+    .dialog-subtitle {
+      color: transparent !important;
+      background: linear-gradient(to bottom, #0b0b0b 72%, transparent 72%) 0 0 / 100% 1.3125em;
+      border-radius: 2px;
+
+      * {
+        visibility: hidden;
+      }
+    }
+
+    .avatar {
+      filter: brightness(0);
+    }
+  }
+
+  .bubbles-inner .bubble:not(:hover) {
+    .message,
+    .name,
+    .reply {
+      color: transparent !important;
+      background: linear-gradient(to bottom, #0b0b0b 72%, transparent 72%) 0 0 / 100% 1.3125em;
+
+      * {
+        visibility: hidden;
+      }
+    }
+
+    .media-container,
+    .attachment,
+    .avatar,
+    .audio {
+      filter: brightness(0);
+    }
+  }
+
+  .bubbles-group-avatar-container:not(:hover),
+  .chat-info:not(:hover) .avatar {
+    filter: brightness(0);
+  }
+
+  .chat-info:not(:hover) .content,
+  .pinned-message:not(:hover) {
+    color: transparent !important;
+    background: linear-gradient(to bottom, #0b0b0b 72%, transparent 72%) 0 0 / 100% 1.3125em;
+
+    * {
+      visibility: hidden;
+    }
+  }
+}
+
 // * reactions under channel posts are hidden (a channel's chat only, not forwarded posts in groups)
 body.pg-hide-channel-reactions .bubbles-inner.is-broadcast reactions-element {
   display: none;
