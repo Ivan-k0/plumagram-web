@@ -1,0 +1,178 @@
+[
+ {
+  "id": 1,
+  "name": "Blue",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#3e93d4",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#e4f4fe",
+   "message-out-primary-color": "#569ace",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 2,
+  "name": "Night Black",
+  "dark": true,
+  "colors": {
+   "background-color": "#000000",
+   "surface-color": "#141414",
+   "primary-color": "#ffffff",
+   "primary-text-color": "#ffffff",
+   "secondary-text-color": "#a0a0a0",
+   "message-background-color": "#212121",
+   "message-out-background-color": "#212121",
+   "message-out-primary-color": "#7a7a7a",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 3,
+  "name": "Black White",
+  "dark": true,
+  "colors": {
+   "background-color": "#000000",
+   "surface-color": "#000000",
+   "primary-color": "#ffffff",
+   "primary-text-color": "#ffffff",
+   "secondary-text-color": "#a0a0a0",
+   "message-background-color": "#212121",
+   "message-out-background-color": "#212121",
+   "message-out-primary-color": "#a0a0a0",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 4,
+  "name": "White Black",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#3e93d4",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#e4f4fe",
+   "message-out-primary-color": "#569ace",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 5,
+  "name": "Red",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#ef5350",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#fee3e3",
+   "message-out-primary-color": "#ef5350",
+   "danger-color": "#b71c1c"
+  }
+ },
+ {
+  "id": 6,
+  "name": "Orange",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#ff5722",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#fbe2e0",
+   "message-out-primary-color": "#f4511e",
+   "danger-color": "#e53935"
+  }
+ },
+ {
+  "id": 7,
+  "name": "Green",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#66bb6a",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#effdde",
+   "message-out-primary-color": "#4caf50",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 8,
+  "name": "Pink",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#ec407a",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#fce4ec",
+   "message-out-primary-color": "#ec407a",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 9,
+  "name": "Cyan",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#00bcd4",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#e0f7fa",
+   "message-out-primary-color": "#00bcd4",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 10,
+  "name": "Night Blue",
+  "dark": true,
+  "colors": {
+   "background-color": "#151d26",
+   "surface-color": "#1c2733",
+   "primary-color": "#64cefd",
+   "primary-text-color": "#ffffff",
+   "secondary-text-color": "#7d8e98",
+   "message-background-color": "#1c2733",
+   "message-out-background-color": "#456a93",
+   "message-out-primary-color": "#86caff",
+   "danger-color": "#e45356"
+  }
+ },
+ {
+  "id": 11,
+  "name": "Classic",
+  "dark": false,
+  "colors": {
+   "background-color": "#f2f2f2",
+   "surface-color": "#ffffff",
+   "primary-color": "#3e93d4",
+   "primary-text-color": "#000000",
+   "secondary-text-color": "#838c96",
+   "message-background-color": "#ffffff",
+   "message-out-background-color": "#e4f4fe",
+   "message-out-primary-color": "#569ace",
+   "danger-color": "#e45356"
+  }
+ }
+]

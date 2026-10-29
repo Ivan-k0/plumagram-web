@@ -11,6 +11,7 @@ import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePick
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import {initServiceFileLine, openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
+import {initThemes, openThemePicker} from '@/plumagram/themes';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -315,6 +316,11 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'search find поиск найти',
   run: openSearch
 }, {
+  id: 'themes',
+  title: () => pt('Тема как в приложении…', 'Theme as in the app…'),
+  keywords: 'theme themes color colors тема темы цвет цвета палитра классика',
+  run: () => openThemePicker()
+}, {
   id: 'night',
   title: () => pt('Ночная тема', 'Night mode'),
   keywords: 'theme dark night тема тёмная темная ночь',
@@ -540,6 +546,13 @@ export function openPlumaSettings() {
   filtersRow.textContent = pt('Фильтры сообщений…', 'Message filters…');
   filtersRow.addEventListener('click', () => openFiltersManager(openPlumaSettings));
 
+  const themesRow = document.createElement('div');
+  themesRow.className = 'pg-settings-row';
+  themesRow.tabIndex = 0;
+  themesRow.setAttribute('role', 'button');
+  themesRow.textContent = pt('Тема как в приложении…', 'Theme as in the app…');
+  themesRow.addEventListener('click', () => openThemePicker(openPlumaSettings));
+
   const hotkeysRow = document.createElement('div');
   hotkeysRow.className = 'pg-settings-row';
   hotkeysRow.tabIndex = 0;
@@ -553,6 +566,7 @@ export function openPlumaSettings() {
     makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
     makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
     makeRow('transcribeAccurate', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
+    themesRow,
     filtersRow,
     hotkeysRow
   );
@@ -654,6 +668,7 @@ export default function initPlumaGram() {
   initMessageTarget();
   initFilters();
   initServiceFileLine();
+  initThemes();
 
   createRoot(() => {
     createEffect(() => {

@@ -19,6 +19,8 @@ export type PlumaSettings = {
   localTranscribe: boolean,
   /** the bigger, slower and more accurate model for voice messages */
   transcribeAccurate: boolean,
+  /** a theme of the Android app (its id in themes.json), 0 — the web version's own */
+  theme: number,
   /** the video quality picked last time (480 / 720 / 1080), 0 — «Авто» */
   videoQuality: number
 };
@@ -32,7 +34,8 @@ const DEFAULTS: PlumaSettings = {
   quietUntil: 0,
   videoQuality: 0,
   localTranscribe: false,
-  transcribeAccurate: false
+  transcribeAccurate: false,
+  theme: 0
 };
 
 function load(): PlumaSettings {
