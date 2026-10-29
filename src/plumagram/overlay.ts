@@ -63,6 +63,13 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?:
     if(e.target === overlay) closeOverlay();
   });
   overlay.addEventListener('keydown', (e) => {
+    // * Enter and Space press a row that acts as a button, as with a mouse (keyboard-only use)
+    const target = e.target as HTMLElement;
+    if((e.key === 'Enter' || e.key === ' ') && target.getAttribute?.('role') === 'button' && !e.defaultPrevented) {
+      e.preventDefault();
+      target.click();
+      return;
+    }
     if(e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
