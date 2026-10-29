@@ -338,6 +338,23 @@ const ACTIONS: PaletteAction[] = [{
   run: () => openPlumaSettings()
 }];
 
+const RECENT_KEY = 'plumagram:palette-recent';
+
+function getRecent(): string[] {
+  try {
+    const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    return Array.isArray(recent) ? recent : [];
+  } catch(err) {
+    return [];
+  }
+}
+
+function rememberRecent(id: string) {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...getRecent().filter((other) => other !== id)].slice(0, 5)));
+  } catch(err) {}
+}
+
 export function openCommandPalette() {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
@@ -360,6 +377,7 @@ export function openCommandPalette() {
 
   const run = (action: PaletteAction) => {
     closeOverlay();
+    rememberRecent(action.id);
     action.run();
   };
 
@@ -372,6 +390,15 @@ export function openCommandPalette() {
       const haystack = (action.title() + ' ' + (action.keywords || '')).toLowerCase();
       return query.split(/\s+/).every((word) => haystack.includes(word));
     });
+    // * with nothing typed, the actions used last come first (the everyday ones are not looked for in a long list)
+    if(!query) {
+      const recent = getRecent();
+      const rank = (action: PaletteAction) => {
+        const idx = recent.indexOf(action.id);
+        return idx === -1 ? recent.length : idx;
+      };
+      filtered = filtered.map((action, idx) => ({action, idx})).sort((a, b) => rank(a.action) - rank(b.action) || a.idx - b.idx).map(({action}) => action);
+    }
     active = Math.min(active, Math.max(0, filtered.length - 1));
 
     list.replaceChildren(...filtered.map((action, idx) => {
