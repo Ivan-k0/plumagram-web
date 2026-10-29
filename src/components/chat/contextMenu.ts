@@ -1,4 +1,5 @@
 import type {MyDocument} from '@appManagers/appDocsManager';
+import {arrangeMessageMenu} from '@/plumagram/messageMenu';
 import type Chat from '@components/chat/chat';
 import IS_TOUCH_SUPPORTED from '@environment/touchSupport';
 import Modes from '@config/modes';
@@ -1735,7 +1736,11 @@ export default class ChatContextMenu {
     this.cleanup();
     this.setButtons();
 
-    const filteredButtons = await this.filterButtons(this.buttons);
+    // * PlumaGram: the menu as set in «Меню сообщения» (items, order) with our own actions in it
+    const filteredButtons = arrangeMessageMenu(await this.filterButtons(this.buttons), {
+      forMessage: !!this.message && !this.chat.selection.isSelecting,
+      inSaved: this.peerId === rootScope.myId
+    });
     if(!filteredButtons.length) {
       return;
     }

@@ -14,6 +14,7 @@ import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
 import {initThemes, openThemePicker} from '@/plumagram/themes';
 import {exportSettings, importSettings} from '@/plumagram/settingsTransfer';
 import {openComposeHelper, openWhatIMissed} from '@/plumagram/ai';
+import {openMessageMenuEditor} from '@/plumagram/messageMenu';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -336,6 +337,11 @@ const ACTIONS: PaletteAction[] = [{
   keywords: 'ai ии пропустил кратко пересказ summary missed непрочитанные',
   run: openWhatIMissed
 }, {
+  id: 'messageMenu',
+  title: () => pt('Меню сообщения: пункты и порядок…', 'Message menu: items and order…'),
+  keywords: 'menu меню пункты порядок context контекстное',
+  run: () => openMessageMenuEditor()
+}, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
   keywords: 'saved favorites избранное заметка note',
@@ -627,6 +633,13 @@ export function openPlumaSettings() {
   loadButton.addEventListener('click', importSettings);
   transferRow.append(saveButton, loadButton);
 
+  const menuRow = document.createElement('div');
+  menuRow.className = 'pg-settings-row';
+  menuRow.tabIndex = 0;
+  menuRow.setAttribute('role', 'button');
+  menuRow.textContent = pt('Меню сообщения…', 'Message menu…');
+  menuRow.addEventListener('click', () => openMessageMenuEditor(openPlumaSettings));
+
   const hotkeysRow = document.createElement('div');
   hotkeysRow.className = 'pg-settings-row';
   hotkeysRow.tabIndex = 0;
@@ -643,6 +656,7 @@ export function openPlumaSettings() {
     makeRow('transcribeAccurate', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
     themesRow,
     filtersRow,
+    menuRow,
     hotkeysRow,
     transferRow
   );
