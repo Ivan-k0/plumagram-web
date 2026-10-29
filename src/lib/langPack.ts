@@ -84,7 +84,9 @@ export type FormatterArgument = string | number | Node | FormatterArgument[];
 export type FormatterArguments = FormatterArgument[];
 
 export const UNSUPPORTED_LANG_PACK_KEY: LangPackKey = IS_MOBILE ? 'Message.Unsupported.Mobile' : 'Message.Unsupported.Desktop';
-const TEST_LOCAL = IS_BETA && true;
+// * PlumaGram: English laid over the translation only on request (?testLocal=1) — in development it hid the
+// * Russian interface behind English while our own windows were Russian
+const TEST_LOCAL = IS_BETA && typeof(location) !== 'undefined' && /[?&]testLocal=1/.test(location.search);
 
 /** A string of the client's own English pack: where the server's pack has none, it stands in. */
 type LocalLangPackString = LangPackString & {local?: true};

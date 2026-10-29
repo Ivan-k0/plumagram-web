@@ -93,8 +93,13 @@ export function initThemes() {
     });
   });
 
+  // * at the start Web K's own themes are not loaded yet: ours goes on with its first painting ('theme_changed')
+  // * or, if that has already been, once it can
   const theme = current();
-  if(theme) applyColors(theme);
+  if(theme) {
+    const tryApply = (attempt = 0) => applyColors(theme).catch(() => attempt < 20 && setTimeout(() => tryApply(attempt + 1), 250));
+    tryApply();
+  }
 }
 
 export function setPlumaTheme(id: number) {
