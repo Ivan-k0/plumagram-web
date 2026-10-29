@@ -15,6 +15,7 @@ import {initThemes, openThemePicker} from '@/plumagram/themes';
 import {exportSettings, importSettings} from '@/plumagram/settingsTransfer';
 import {openComposeHelper, openWhatIMissed} from '@/plumagram/ai';
 import {openMessageMenuEditor} from '@/plumagram/messageMenu';
+import {openGazeta} from '@/plumagram/gazeta';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -341,6 +342,12 @@ const ACTIONS: PaletteAction[] = [{
   title: () => pt('Меню сообщения: пункты и порядок…', 'Message menu: items and order…'),
   keywords: 'menu меню пункты порядок context контекстное',
   run: () => openMessageMenuEditor()
+}, {
+  id: 'gazeta',
+  title: () => pt('Газета — посты всех каналов', 'Gazeta — all channels\' posts'),
+  keywords: 'gazeta газета лента каналы посты feed channels',
+  hotkey: `${ALT}G`,
+  run: openGazeta
 }, {
   id: 'saved',
   title: () => pt('Избранное', 'Saved Messages'),
@@ -739,6 +746,7 @@ function onKeyDown(e: KeyboardEvent) {
 }
 
 const APP_HOTKEYS: {[code: string]: () => void} = {
+  KeyG: openGazeta,
   KeyI: openComposeHelper,
   KeyB: openStorage,
   Digit3: tagHoveredSavedMessage,
