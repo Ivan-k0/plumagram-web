@@ -1,5 +1,5 @@
 import type {PushNotificationObject} from '@lib/serviceWorker/push';
-import {isQuietNow, setLastNotifiedPeer} from '@/plumagram/settings';
+import {isQuietNow, plumaSettings, pt, setLastNotifiedPeer} from '@/plumagram/settings';
 import {MOUNT_CLASS_TO} from '@config/debug';
 import getPeerTitle from '@components/wrappers/getPeerTitle';
 import wrapMessageForReply from '@components/wrappers/messageForReply';
@@ -953,6 +953,11 @@ export class UiNotificationsManager {
     // * PlumaGram: «Не беспокоить» на N минут — no notification and no sound in this tab
     if(isQuietNow()) {
       return;
+    }
+
+    // * PlumaGram: «Не подглядывай!» — the text of a message is not shown in the notification either
+    if(plumaSettings().noPeek && data.message) {
+      data.message = pt('Новое сообщение', 'New message');
     }
 
     data.image ||= NOTIFICATION_ICON_PATH;
