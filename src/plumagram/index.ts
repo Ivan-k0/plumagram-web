@@ -662,6 +662,10 @@ function onKeyDown(e: KeyboardEvent) {
     return;
   }
 
+  // * Option with a digit types a sign on a Mac (# on the British layout, € and others): in a text field it is
+  // * left to the typing
+  if(/^Digit\d$/.test(e.code) && isEditable(e.target)) return;
+
   const appAction = APP_HOTKEYS[e.code];
   if(appAction) {
     e.preventDefault();
