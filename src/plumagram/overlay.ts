@@ -32,9 +32,32 @@ export function closeOverlay() {
  * Where our window stands: next to `anchor` (the message it is about), like a context menu, or else in
  * the middle of the chat column (the middle of the whole page looked pushed to the top left over the chat)
  */
-function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLElement) {
+function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLElement, screen?: boolean) {
   const margin = 16;
   const vw = window.innerWidth, vh = window.innerHeight;
+
+  // * a screen of its own (Хранилище): exactly where the chat is, no dimming — the chat list stays usable to see
+  if(screen) {
+    overlay.classList.add('is-screen');
+    // * right of the chat list, as tall as it (the chat column itself runs under the list in the floating layout)
+    const fit = () => {
+      const list = document.getElementById('column-left')?.getBoundingClientRect();
+      const gap = 16;
+      const left = list && list.width < window.innerWidth * .6 ? list.right + gap : gap;
+      const top = list ? list.top : gap;
+      const height = list ? list.height : window.innerHeight - 2 * gap;
+      Object.assign(overlay.style, {left: left + 'px', top: top + 'px', width: (window.innerWidth - left - gap) + 'px', height: height + 'px'});
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    new MutationObserver((_, observer) => {
+      if(!overlay.isConnected) {
+        window.removeEventListener('resize', fit);
+        observer.disconnect();
+      }
+    }).observe(document.body, {childList: true});
+    return;
+  }
 
   if(anchor?.isConnected) {
     overlay.classList.add('is-anchored');
@@ -59,7 +82,7 @@ function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLEleme
 }
 
 /** `onBack`: this window was opened from another one — Esc, «back» and the arrow return there */
-export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?: () => void) {
+export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?: () => void, screen?: boolean) {
   closeOverlay();
   const overlay = document.createElement('div');
   overlay.className = 'pg-overlay';
@@ -87,7 +110,7 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?:
   // * counted as the app's own popups are: while it is open, keys are not «typed anywhere» into the message
   // * field — Enter on a choice of ours also sent the draft of the chat under it
   overlayCounter.isOverlayActive = true;
-  placePanel(overlay, panel, anchor);
+  placePanel(overlay, panel, anchor, screen);
 
   // * while our window is open the focus stays in it: the app gives it back to the message field when the
   // * window before ours closes, and typing went into the chat (Enter sent it)
@@ -109,6 +132,8 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?:
   // * in the app's back stack, so Esc and «back» close our window first, not the chat under it
   appNavigationController.pushItem(overlayNavigationItem = {
     type: 'popup',
+    // * Esc in a field that cancels itself (a folder's name being typed) is that field's
+    onEscape: (e) => (e.target as HTMLElement)?.dataset?.pgEscape !== 'local',
     onPop: () => {
       overlayNavigationItem = undefined;
       closeOverlay();

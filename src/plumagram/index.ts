@@ -681,6 +681,8 @@ function onKeyDown(e: KeyboardEvent) {
   const mod = IS_MAC ? e.metaKey : e.ctrlKey;
 
   // * Esc closes our window wherever the focus is (otherwise it would close the chat under it)
+  // * a field of ours that cancels itself on Esc (a folder's name being typed) keeps that Esc
+  if(isOverlayOpen() && e.key === 'Escape' && (e.target as HTMLElement)?.dataset?.pgEscape === 'local') return;
   if(isOverlayOpen() && e.key === 'Escape') {
     e.preventDefault();
     e.stopPropagation();

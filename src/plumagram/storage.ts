@@ -59,7 +59,13 @@ export async function openSavedSearch(query: string) {
   setTimeout(() => appImManager.chat?.initSearch({query, focus: false}), 300);
 }
 
+/** «Хранилище»: the screen where the chat is (storageScreen.ts) */
 export function openStorage() {
+  import('@/plumagram/storageScreen').then(({openStorageScreen}) => openStorageScreen());
+}
+
+/** The earlier small window of the storage (kept for the palette's tag search, not opened from the menus) */
+export function openStorageWindow() {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
