@@ -1,4 +1,6 @@
 import {createEffect, createRoot, createSignal, createUniqueId, on} from 'solid-js';
+import {openStorage} from '@/plumagram/storage';
+import {pt} from '@/plumagram/settings';
 import appImManager from '@lib/appImManager';
 import rootScope from '@lib/rootScope';
 import {createSearchGroup, SearchGroup} from '@components/searchGroup';
@@ -768,6 +770,13 @@ export class AppSidebarLeft extends SidebarSlider {
         }, 0);
       },
       separator: true
+    }, {
+      // * PlumaGram: «Хранилище» right after «Избранное», as in the app (user 2026-10-29)
+      icon: 'folder',
+      regularText: pt('Хранилище', 'Storage'),
+      onClick: () => {
+        setTimeout(() => openStorage(), 0);
+      }
     }, btnArchive, {
       icon: 'stories',
       text: 'MyStories.Title',
