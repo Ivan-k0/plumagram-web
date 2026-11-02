@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{n as e}from"./rootScope-CH5D98Tl.js";import{S as t,b as n}from"./solid-Beq2bZCx.js";import{n as r}from"./hotModule-B-IlHV9s.js";var[i,a]=n(()=>t(e.premium)),o=()=>{e.managers.rootScope.getPremium().then(a)};r(void 0,e,`premium_toggle`,a),r(void 0,e,`premium_toggle_private`,({isPremium:e})=>a(e)),e.myId?o():r(void 0,e,`user_auth`,o);function s(){return i}export{s as t};
+//# sourceMappingURL=premium-CRBjHdiA.js.map

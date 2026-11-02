@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{m as e}from"./userAgent-BxgZpe58.js";import{O as t,P as n,f as r}from"./solid-Beq2bZCx.js";import{l as i,t as a}from"./web-BIda0ujS.js";import{t as o}from"./rippleElement-BWvpMCCa.js";function s(s){let[c,l]=n(s,[`as`,`disabled`,`ripple`]),u=e.a11y?`button`:c.as||`div`,d=e.a11y?`button`:void 0;return c.ripple?r(o,t(l,{component:u,type:d,get disabled(){return i(()=>!!e.a11y)()?c.disabled:void 0}})):r(a,t(l,{component:u,type:d,get disabled(){return i(()=>!!e.a11y)()?c.disabled:void 0}}))}export{s as t};
+//# sourceMappingURL=a11yButton-CfNGE0FQ.js.map

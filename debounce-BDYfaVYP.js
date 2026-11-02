@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{d as e}from"./userAgent-BxgZpe58.js";import{r as t}from"./cancellablePromise-CCgNT6Fl.js";function n(n,r,i=!0,a=!0){let o,s,c,l,u=!1,d=e=>{let t=c,r=l;try{t(n.apply(null,e))}catch(e){console.error(`debounce error`,e),r(e)}},f=(...n)=>{s||(s=new Promise((e,t)=>(c=e,l=t))),o?(clearTimeout(o),u=!0,l(),s=new Promise((e,t)=>(c=e,l=t))):i&&(d(n),u=!1);let f=e.setTimeout(()=>{a&&(!i||u)&&d(n),o===f&&(o=s=c=l=void 0,u=!1)},r);return o=f,s.catch(t),s};return f.clearTimeout=()=>{o&&(e.clearTimeout(o),l(),o=s=c=l=void 0,u=!1)},f.isDebounced=()=>!!o,f}export{n as t};
+//# sourceMappingURL=debounce-BDYfaVYP.js.map

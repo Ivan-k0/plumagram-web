@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+function e(e,t,n,r,i){if(!n)n=e=>e;else if(typeof n!=`function`){let e=n;n=t=>t[e]}i||(i=(e,t)=>e-t);let a=n(t);if(r??(r=e.indexOf(t)),r!==-1){let t=e[r-1],o=e[r+1];if((!t||i(n(t),a)>=0)&&(!o||i(n(o),a)<=0))return r;e.splice(r,1)}let o=e.length;if(!o||i(a,n(e[o-1]))<=0)return e.push(t)-1;if(i(a,n(e[0]))>=0)return e.unshift(t),0;for(let r=0;r<o;r++)if(i(a,n(e[r]))>0)return e.splice(r,0,t),r;return console.error(`wtf`,e,t),e.indexOf(t)}export{e as t};
+//# sourceMappingURL=insertInDescendSortedArray-CXH8eDMg.js.map

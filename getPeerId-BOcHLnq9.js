@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{Y as e}from"./objectUrlUtils-DtS2WkbU.js";import"./rootScope-CH5D98Tl.js";function t(t){if(t!==void 0&&t.isPeerId&&t.isPeerId())return t;if(e(t)){let e=t.user_id;if(e!==void 0)return e.toPeerId(!1);let n=t.channel_id||t.chat_id;return n===void 0?0:n.toPeerId(!0)}if(!t)return 0;let n=t.charAt(0)===`u`,r=t.substr(1).split(`_`);return n?r[0].toPeerId():(r[0]||``).toPeerId(!0)}export{t};
+//# sourceMappingURL=getPeerId-BOcHLnq9.js.map

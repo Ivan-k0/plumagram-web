@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{J as e}from"./apiManagerProxy-hmu1ZXXV.js";import{t}from"./objectUrlUtils-DtS2WkbU.js";function n(e){return URL.createObjectURL(e)}function r(n){t(n)&&(e(n),URL.revokeObjectURL(n))}var i=class{constructor(){this.urls=new Set}create(e){return this.add(n(e))}add(e){return t(e)&&this.urls.add(e),e}release(e){this.urls.delete(e)&&r(e)}dispose(){for(let e of this.urls)r(e);this.urls.clear()}};export{n,r,i as t};
+//# sourceMappingURL=objectUrlScope-HHt2M_db.js.map

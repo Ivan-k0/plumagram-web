@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+var e=`Roboto`,t=`Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif`,n=`16px`,r=`400 ${n} ${t}`,i=`500 ${n} ${t}`;export{n as a,i,e as n,r,t};
+//# sourceMappingURL=font-DM0AhuRM.js.map

@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{i as e,n as t}from"./appWindow-C0eW030f.js";function n(n){let r=new Set,i,a,o=()=>{let e=t().IntersectionObserver;i=new e(n)};return{observe(t){typeof IntersectionObserver<`u`&&(i||(o(),a=e(()=>{i.disconnect(),o(),r.forEach(e=>i.observe(e))})),r.add(t),i.observe(t))},unobserve(e){r.delete(e),i?.unobserve(e)},disconnect(){r.clear(),i?.disconnect(),a?.(),i=a=void 0}}}export{n as t};
+//# sourceMappingURL=createAppWindowIntersectionObserver-DCPEyBsw.js.map

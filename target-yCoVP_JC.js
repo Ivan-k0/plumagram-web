@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+var e;function t(){document.addEventListener(`mouseover`,t=>{let n=t.target?.closest?.(`.bubbles-inner .bubble[data-mid]`);n&&(e=n)},{passive:!0})}function n(){let t=document.querySelectorAll(`.bubbles-inner .bubble[data-mid]:hover`);if(t.length)return t[t.length-1];if(e?.isConnected&&e.closest(`.chat:not(.hide)`))return e}function r(){let e=n();if(!e)return;let t=e.querySelector(`.message`)?.cloneNode(!0);t?.querySelectorAll(`.time, .time-inner, .reactions`).forEach(e=>e.remove());let r=(t?.textContent||``).replace(/\s+/g,` `).trim();return r?r.length>20?r.slice(0,20).trim()+`…`:r:`…`}export{r as n,t as r,n as t};
+//# sourceMappingURL=target-yCoVP_JC.js.map

@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{y as e}from"./solid-Beq2bZCx.js";import{n as t}from"./clickEvent-BUNslqEw.js";import{l as n}from"./web-BIda0ujS.js";import{m as r}from"./messageActionTextNewUnsafe-Bh01Q3Pi.js";import{t as i}from"./classname-wtdAGhQU.js";import{t as a}from"./createListenerSetter-sXzQGxfX.js";var o=o=>{let s=new r,c=a();o.ref instanceof Function&&o.ref?.(s.element);let[l]=e(()=>[o.peerId,o.threadId],async([e,n])=>(await s.update({peerId:e,threadId:n,dialog:!1,onlyFirstName:o.onlyFirstName,username:o.username,limitSymbols:o.limitSymbols,withIcons:o.withIcons}),o.onClick&&t(s.element,o.onClick,{listenerSetter:c}),!0));return i(s.element,()=>o.class),n(()=>n(()=>!!l())()&&s.element)};export{o as t};
+//# sourceMappingURL=peerTitleTsx-BrWUDL0l.js.map

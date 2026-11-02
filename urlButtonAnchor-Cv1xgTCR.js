@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{t as e}from"./htmlToDocumentFragment-VwwX6XcI.js";import{o as t}from"./wrapRichText-BOwIc94g.js";var n=`rich-button-link`;function r(r){let i=t(` `,{entities:[{_:`messageEntityTextUrl`,length:1,offset:0,url:r}]}),a=e(i).firstElementChild;return a.classList.add(n),a}var i=new WeakMap;function a(e,t){let n=e.getAttributeNames().filter(e=>e!==`class`);i.get(t)?.forEach(e=>{n.includes(e)||t.removeAttribute(e)}),n.forEach(n=>t.setAttribute(n,e.getAttribute(n))),i.set(t,n)}export{a as n,r,n as t};
+//# sourceMappingURL=urlButtonAnchor-Cv1xgTCR.js.map

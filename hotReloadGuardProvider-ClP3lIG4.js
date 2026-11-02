@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{n as e}from"./rolldown-runtime-BJUb_-bc.js";import{f as t}from"./solid-Beq2bZCx.js";import{n}from"./hotReloadGuard-CHYXNvhm.js";var r=e({default:()=>u,hotReloadGuard:()=>i,hotReloadGuardReady:()=>l,registerHotReloadGuard:()=>o,setHotReloadGuardLoader:()=>c}),i={},a=!!i.HotReloadGuard;function o(e){Object.assign(i,e,{HotReloadGuard:u}),a=!0}var s;function c(e){s=e}async function l(){await s?.()}function u(e){if(!a)throw Error(`SolidJSHotReloadGuardProvider: nothing registered, import @lib/solidjs/hotReloadGuardValue at startup`);return t(n.Provider,{value:i,get children(){return e.children}})}export{o as a,l as i,i as n,c as o,r,u as t};
+//# sourceMappingURL=hotReloadGuardProvider-ClP3lIG4.js.map

@@ -1,0 +1,1 @@
+{"version":3,"file":"gzipCompress-DPZLXqvp.js","names":["gzipSync","gzipCompress","bytes"],"sources":["../../src/helpers/gzipCompress.ts"],"sourcesContent":["import {gzipSync} from 'fflate';\n\nexport default function gzipCompress(bytes: Uint8Array): Uint8Array {\n  return gzipSync(bytes);\n}\n"],"mappings":";iDAEA,SAAwBC,EAAa,EAA+B,CAClE,OAAOD,EAASE,CAAK,CACvB"}

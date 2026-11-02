@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{n as e}from"./cancellablePromise-CCgNT6Fl.js";var t,n;function r(r){t||(t=new Worker(new URL(new URL(`tinyld.worker-CardPHKO.js`,import.meta.url).href,``+import.meta.url),{type:`module`}),t.addEventListener(`message`,e=>{let{lang:t}=e.data;n.shift().resolve(t)}),n=[]);let i=e();return n.push(i),t.postMessage({text:r}),i}export{r as t};
+//# sourceMappingURL=detect-BIde2s87.js.map

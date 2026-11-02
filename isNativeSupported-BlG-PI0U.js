@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+function e(){return typeof AudioEncoder<`u`&&typeof AudioData<`u`&&typeof AudioWorkletNode<`u`&&typeof AudioContext<`u`&&!!navigator.mediaDevices?.getUserMedia}export{e as t};
+//# sourceMappingURL=isNativeSupported-BlG-PI0U.js.map

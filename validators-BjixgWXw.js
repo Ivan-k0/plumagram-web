@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+function e(e){if(e.length<3||e.length>32||!/[a-zA-Z]/.test(e.charAt(0)))return!1;for(let t=0;t<e.length;t++){let n=e.charAt(t);if(!/[a-zA-Z0-9_]/.test(n))return!1}if(e.charAt(e.length-1)===`_`)return!1;for(let t=1;t<e.length;t++)if(e.charAt(t-1)===`_`&&e.charAt(t)===`_`)return!1;return!0}function t(t){return t.length>=3&&e(t)}export{t as n,e as t};
+//# sourceMappingURL=validators-BjixgWXw.js.map

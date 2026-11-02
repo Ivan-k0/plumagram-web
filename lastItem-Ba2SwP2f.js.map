@@ -1,0 +1,1 @@
+{"version":3,"file":"lastItem-Ba2SwP2f.js","names":["lastItem","arr"],"sources":["../../src/helpers/array/lastItem.ts"],"sourcesContent":["export default function lastItem<T>(arr: T[]): T | undefined {\n  return arr[arr.length - 1];\n}\n"],"mappings":";AAAA,SAAwBA,EAAY,EAAyB,CAC3D,OAAOC,EAAIA,EAAI,OAAS,EAC1B"}

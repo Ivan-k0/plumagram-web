@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{f as e,g as t,m as n,p as r}from"./commonStateStorage-eHfsUR3W.js";function i(e){e.sort((e,t)=>e.offset-t.offset||t.length-e.length)}function a(e,t){return e.offset<t.offset+t.length&&e.offset+e.length>t.offset}function o(i,o,s=t.has(o._)){if(s)return i.find(e=>a(e,o));let c=-1,l=-1,u;return i.find(i=>{let{offset:a,length:s}=i;t.has(i._)&&(c=a,l=c+s,u=i._);let d=o._===`messageEntityBlockquote`&&n.has(u);return c!==-1&&o.offset>=c&&o.offset<l&&!r.has(o._)&&!d?!0:o._!==i._&&(e.has(o._)||e.has(i._)||d)?!1:o.offset>=a&&o.length+o.offset<=s+a})}export{i as n,o as t};
+//# sourceMappingURL=findConflictingEntity-C-YNTnFb.js.map

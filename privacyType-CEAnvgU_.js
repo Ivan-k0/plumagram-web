@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+function e(e){let t;return e.pFlags.close_friends?t=`close`:e.pFlags.public?t=`public`:e.pFlags.selected_contacts?t=`selected`:e.pFlags.contacts?t=`contacts`:e.privacy&&(t=e.privacy.some(e=>e._===`privacyValueAllowCloseFriends`)?`close`:e.privacy.some(e=>e._===`privacyValueAllowAll`)?`public`:e.privacy.some(e=>e._===`privacyValueAllowContacts`)?`contacts`:`selected`),t}export{e as t};
+//# sourceMappingURL=privacyType-CEAnvgU_.js.map

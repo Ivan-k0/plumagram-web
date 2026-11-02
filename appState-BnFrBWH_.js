@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{n as e}from"./rootScope-CH5D98Tl.js";import{b as t}from"./solid-Beq2bZCx.js";import{a as n,n as r,o as i}from"./store-CyBR0Q3R.js";var[a,o]=t(()=>r({})),s=(...t)=>{let n=t[0];return o(...t),e.managers.appStateManager.setByKey(n,i(a[n]))},c=(e,t)=>{typeof e==`object`?o(e):o(e,n(t))},l=e=>{o(n(e))},u=()=>[a,s],d=()=>a.appConfig,f=()=>!!d().freeze_since_date;export{d as a,c as i,l as n,u as o,s as r,f as s,a as t};
+//# sourceMappingURL=appState-BnFrBWH_.js.map

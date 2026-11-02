@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{F as e}from"./objectUrlUtils-DtS2WkbU.js";import{s as t}from"./mimeTypeMap-BXk3gtwl.js";function n(n,{download:r=!1,thumb:i,supportsHlsStreaming:a}={}){let o;return o=r?`download`:i?`thumb`:a?`hls`:n.supportsStreaming?`stream`:`document`,e(o,t(n,{thumb:i}))}function r(e){return{_:`inputDocument`,id:e.id,access_hash:e.access_hash,file_reference:e.file_reference}}function i(e){return e&&(e.saved_from_name||e.from_name)}export{r as n,n as r,i as t};
+//# sourceMappingURL=getFwdFromName-CgHJc9Wz.js.map

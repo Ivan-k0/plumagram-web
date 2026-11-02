@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{t as e}from"./insertInDescendSortedArray-CXH8eDMg.js";var t=function(e){return e.Stories=`stories`,e.Pinned=`pinnedStories`,e.Archive=`archiveStories`,e}(t||{});function n(n,r,i,a,o){let s=i?r.id:r;return a===t.Pinned?e(n,s,e=>{let t=i?e:e.id,n=i?o.get(t):e.pinnedIndex;return n===void 0?t:4294967295-n}):a===t.Archive?e(n,s,i?e=>e:e=>e.id):e(n,s,i?e=>4294967295-e:e=>4294967295-e.id)}function r(e,t,n=e=>e){let r=new Map(e.map(e=>[n(e),e])),i=[];for(let e of t)r.has(e)&&(i.push(r.get(e)),r.delete(e));return i.concat(e.filter(e=>r.has(n(e))))}export{n,t as r,r as t};
+//# sourceMappingURL=putInOrder-CEnGSpw-.js.map

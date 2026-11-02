@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{r as e}from"./toast-DkG7krqa.js";import{t}from"./getPeerTitle-DY-wBIHo.js";import{t as n}from"./confirmationPopup-DLBv6BVz.js";async function r(r){let{communityId:i,peerId:a,managers:o}=r,s=await t({peerId:a,plainText:!0});try{await n({titleLangKey:`Community.RemoveChat`,descriptionLangKey:`Community.RemoveChatConfirm`,descriptionLangArgs:[s],button:{langKey:`Remove`,isDanger:!0}})}catch{return!1}try{return await o.appCommunitiesManager.togglePeerLink({communityId:i,peerId:a,action:`deleted`}),e({langPackKey:`Community.ChatRemoved`}),!0}catch(t){return console.error(`remove chat from community error`,t),e({langPackKey:`Error.AnError`}),!1}}export{r as t};
+//# sourceMappingURL=removeChatFromCommunity-DhX0EFRK.js.map

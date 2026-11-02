@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{a as e}from"./langPack-DOpE6pp-.js";function t(e){if(e?._===`channel`||e?._===`chat`)return e.participants_count}function n(n){if(n?._===`user`&&n.pFlags.bot)return e(`Bot`);let r=t(n);return r===void 0?n?._===`channel`&&!n.pFlags.megagroup?e(`Channel`):e(`Group`):e(n?._===`channel`&&!n.pFlags.megagroup?`Subscribers`:`Members`,[r])}export{n,t};
+//# sourceMappingURL=communityPeerStatus-BVtnKH4O.js.map

@@ -1,0 +1,3 @@
+//# allFunctionsCalledOnLoad
+import{n as e}from"./rolldown-runtime-BJUb_-bc.js";import{a as t}from"./appSettings-Ck7PfhSL.js";import{o as n}from"./appState-BnFrBWH_.js";import{t as r}from"./detect-BIde2s87.js";var i=e({default:()=>a});async function a(e){let[i]=t(),[a]=n();if(!e||!i.translations.showInMenu||a.appConfig.translations_manual_enabled!==`enabled`)return;let o=await r(e);if(!i.translations.doNotTranslate.includes(o))return o}export{i as n,a as t};
+//# sourceMappingURL=detectLanguageForTranslation-CJHj0ks9.js.map
