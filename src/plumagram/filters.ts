@@ -4,6 +4,7 @@
  * Only the display in this browser changes: nothing is deleted. Own messages are never hidden.
  */
 
+import Icon from '@components/icon';
 import {pt} from '@/plumagram/settings';
 import {getTargetBubble} from '@/plumagram/target';
 import {createOverlay, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
@@ -207,9 +208,13 @@ export function openFiltersManager(onBack?: () => void) {
 
   const title = makeTitle(pt('Фильтры сообщений', 'Message filters'), true, onBack);
 
+  const searchBar = document.createElement('label');
+  searchBar.className = 'pg-palette-search';
   const input = document.createElement('input');
   input.className = 'pg-palette-input';
   input.placeholder = pt('Новое правило: слово или фраза, Enter — добавить везде', 'New rule: a word or phrase, Enter adds it everywhere');
+  input.setAttribute('aria-label', pt('Новое правило', 'New rule'));
+  searchBar.append(Icon('add'), input);
 
   const list = document.createElement('div');
   list.className = 'pg-list';
@@ -217,25 +222,33 @@ export function openFiltersManager(onBack?: () => void) {
   const render = () => {
     list.replaceChildren(...rules.map((rule, idx) => {
       const item = document.createElement('div');
-      item.className = 'pg-item';
-      const label = document.createElement('span');
-      label.className = 'pg-item-title';
-      label.textContent = `«${rule.text}» — ${scopeText(rule)}${rule.hideFully ? pt(', полностью', ', entirely') : ''}`;
+      item.className = 'pg-item pg-item--static';
+      // * two lines, as a Material list: the words hidden, and where
+      const texts = document.createElement('div');
+      texts.className = 'pg-item-title pg-settings-row-text';
+      const words = document.createElement('div');
+      words.textContent = `«${rule.text}»`;
+      words.dir = 'auto';
+      const where = document.createElement('div');
+      where.className = 'pg-settings-row-sub';
+      where.textContent = scopeText(rule) + (rule.hideFully ? pt(', полностью', ', entirely') : '');
+      texts.append(words, where);
       const remove = document.createElement('button');
-      remove.className = 'pg-item-remove';
-      remove.textContent = pt('Убрать', 'Remove');
+      remove.className = 'pg-arrow pg-filter-remove';
+      remove.append(Icon('delete'));
+      remove.setAttribute('aria-label', pt('Убрать правило', 'Remove the rule'));
       remove.addEventListener('click', () => {
         removeFilterRule(idx);
         render();
       });
-      item.append(label, remove);
+      item.append(Icon('eyecross', 'pg-item-icon'), texts, remove);
       return item;
     }));
 
     if(!rules.length) {
       const empty = document.createElement('div');
-      empty.className = 'pg-empty';
-      empty.textContent = pt('Правил пока нет. Наведи мышь на сообщение и нажми ⌥/Alt+X — «скрыть похожие».', 'No rules yet. Point at a message and press ⌥/Alt+X to hide similar ones.');
+      empty.className = 'pg-empty pg-empty--big';
+      empty.append(Icon('filter'), pt('Правил пока нет. Наведи мышь на сообщение и нажми ⌥/Alt+X — «скрыть похожие».', 'No rules yet. Point at a message and press ⌥/Alt+X to hide similar ones.'));
       list.append(empty);
     }
   };
@@ -251,7 +264,7 @@ export function openFiltersManager(onBack?: () => void) {
   });
 
   render();
-  panel.append(title, input, list);
+  panel.append(title, searchBar, list);
   createOverlay(panel, undefined, onBack);
   focusSoon(input);
 }

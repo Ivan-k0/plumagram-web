@@ -85,6 +85,15 @@ function validate(parsed: any): CloudStorage {
       !Array.isArray(folder.ids) || folder.ids.length > MAX_IDS || !folder.ids.every(isId)) return;
     folder.name = folder.name.slice(0, MAX_NAME);
     if(!isId(folder.color)) folder.color = 0;
+    // * «Поделиться папкой»: a share that isn't sound is dropped (the folder stays), as the phone does
+    const share = folder.share;
+    if(share !== undefined && (!share || typeof share !== 'object' || !isId(share.chat) ||
+      (share.link !== undefined && typeof share.link !== 'string') ||
+      (share.done !== undefined && !(Array.isArray(share.done) && share.done.length <= MAX_IDS && share.done.every(isId))))) {
+      delete folder.share;
+    } else if(share) {
+      share.done ??= [];
+    }
   }
   for(const tag in tags) {
     if(!Array.isArray(tags[tag]) || tags[tag].length > MAX_IDS || !tags[tag].every(isId)) return;
@@ -269,7 +278,11 @@ export async function addToFolder(folderId: number, mids: number[]) {
   if(!folder) return 0;
   const ids = mids.map(toTdId).filter((id) => !folder.ids.includes(id));
   folder.ids.push(...ids);
-  if(ids.length) await saveCloudStorage(data);
+  if(ids.length) {
+    await saveCloudStorage(data);
+    // * a shared folder with «Добавлять новое из папки» sends it on to its channel
+    if(folder.share) import('@/plumagram/storageShare').then(({onFolderChanged}) => onFolderChanged(folder));
+  }
   return ids.length;
 }
 

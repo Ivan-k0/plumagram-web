@@ -52,11 +52,11 @@ export async function openComposeHelper() {
 
   const otherLang = /[а-яё]/i.test(text) ? 'en' : 'ru';
   openChoicePicker(pt('ИИ-помощник', 'AI helper'), [
-    {text: pt('Исправить ошибки', 'Fix mistakes'), run: run({proofread: true}, pt('исправляю', 'fixing'))},
-    {text: pt('Добавить эмодзи', 'Add emoji'), run: run({emojify: true}, pt('добавляю эмодзи', 'adding emoji'))},
-    {text: pt('Короче', 'Shorter'), run: run({tone: {_: 'inputAiComposeToneDefault', tone: 'short'}}, pt('сокращаю', 'shortening'))},
-    {text: pt('Официальнее', 'More formal'), run: run({tone: {_: 'inputAiComposeToneDefault', tone: 'formal'}}, pt('переписываю', 'rewriting'))},
-    {text: otherLang === 'en' ? pt('Перевести на английский', 'Translate to English') : pt('Перевести на русский', 'Translate to Russian'),
+    {icon: 'check', text: pt('Исправить ошибки', 'Fix mistakes'), run: run({proofread: true}, pt('исправляю', 'fixing'))},
+    {icon: 'smile', text: pt('Добавить эмодзи', 'Add emoji'), run: run({emojify: true}, pt('добавляю эмодзи', 'adding emoji'))},
+    {icon: 'minus', text: pt('Короче', 'Shorter'), run: run({tone: {_: 'inputAiComposeToneDefault', tone: 'short'}}, pt('сокращаю', 'shortening'))},
+    {icon: 'textedit', text: pt('Официальнее', 'More formal'), run: run({tone: {_: 'inputAiComposeToneDefault', tone: 'formal'}}, pt('переписываю', 'rewriting'))},
+    {icon: 'language', text: otherLang === 'en' ? pt('Перевести на английский', 'Translate to English') : pt('Перевести на русский', 'Translate to Russian'),
       run: run({translate_to_lang: otherLang}, pt('перевожу', 'translating'))}
   ], (input.chatInput || field) as HTMLElement);
 }
@@ -87,7 +87,7 @@ export async function openWhatIMissed() {
   const body = document.createElement('div');
   body.className = 'pg-ai-body';
   body.textContent = unreadCount ? pt(`Читаю ${Math.min(unreadCount, MAX_MISSED)} непрочитанных…`, `Reading ${Math.min(unreadCount, MAX_MISSED)} unread…`) : pt('Непрочитанных в этом чате нет.', 'No unread messages in this chat.');
-  panel.append(makeTitle(pt('✨ Что пропустил', '✨ What I missed')), body);
+  panel.append(makeTitle(pt('Что пропустил', 'What I missed')), body);
   createOverlay(panel);
   focusSoon(panel);
   if(!unreadCount) return;

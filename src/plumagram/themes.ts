@@ -6,6 +6,7 @@
 
 import rootScope from '@lib/rootScope';
 import {toast} from '@components/toast';
+import Icon from '@components/icon';
 import {plumaSettings, pt, setPlumaSetting} from '@/plumagram/settings';
 import {closeOverlay, createOverlay, focusSoon, makeTitle} from '@/plumagram/overlay';
 import THEMES from '@/plumagram/themes.json';
@@ -147,10 +148,8 @@ export function openThemePicker(onBack?: () => void) {
     label.textContent = name;
     row.append(swatch, label);
     if(id === chosen) {
-      const check = document.createElement('span');
-      check.className = 'pg-item-state';
-      check.textContent = '✓';
-      row.append(check);
+      row.append(Icon('check', 'pg-item-state'));
+      row.setAttribute('aria-current', 'true');
     }
 
     const choose = () => {

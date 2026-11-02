@@ -7,7 +7,7 @@ import {createEffect, createRoot} from 'solid-js';
 import {toast} from '@components/toast';
 import {getLastNotifiedPeer, isQuietNow, plumaSettings, pt, setPlumaSetting, togglePlumaSetting} from '@/plumagram/settings';
 import {MessageHotkeyAction, runMessageHotkey, toggleChatTranslation} from '@/plumagram/messageHotkeys';
-import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon, makeTitle} from '@/plumagram/overlay';
+import {ChoiceOption, closeOverlay, createOverlay, isOverlayOpen, openChoicePicker, focusSoon, makeCaption, makeLinkRow, makeSwitchRow, makeTitle} from '@/plumagram/overlay';
 import {hideSimilarToHovered, initFilters, openFiltersManager} from '@/plumagram/filters';
 import {initServiceFileLine, openStorage, putHoveredIntoFolder, tagHoveredSavedMessage} from '@/plumagram/storage';
 import {getTargetSnippet, initMessageTarget} from '@/plumagram/target';
@@ -16,6 +16,9 @@ import {exportSettings, importSettings} from '@/plumagram/settingsTransfer';
 import {openComposeHelper, openWhatIMissed} from '@/plumagram/ai';
 import {openMessageMenuEditor} from '@/plumagram/messageMenu';
 import {openGazeta} from '@/plumagram/gazeta';
+import contextMenuController from '@helpers/contextMenuController';
+import IconElement from '@components/icon';
+import rootScope from '@lib/rootScope';
 import '@/plumagram/plumagram.scss';
 
 type PaletteAction = {
@@ -334,7 +337,7 @@ const ACTIONS: PaletteAction[] = [{
   run: openComposeHelper
 }, {
   id: 'whatIMissed',
-  title: () => pt('✨ Что пропустил в этом чате', '✨ What I missed in this chat'),
+  title: () => pt('Что пропустил в этом чате', 'What I missed in this chat'),
   keywords: 'ai ии пропустил кратко пересказ summary missed непрочитанные',
   run: openWhatIMissed
 }, {
@@ -398,21 +401,34 @@ function rememberRecent(id: string) {
   } catch(err) {}
 }
 
+// * each action with the app's icon, as a Material list: the eye finds an action by its picture before its words
+const ACTION_ICONS: {[id: string]: Icon} = {
+  noPeek: 'hide', noAds: 'ads', hideChannelReactions: 'reactions', muteChat: 'mute', quiet: 'muted',
+  reply: 'reply', forward: 'forward', toSaved: 'savedmessages', remind: 'schedule', hideSimilar: 'eyecross',
+  filters: 'filter', pin: 'pin', translate: 'language', translateChat: 'language', lastNotification: 'unread',
+  nextAccount: 'user', note: 'mynotes', storage: 'folder', tagSaved: 'tag', toFolder: 'folder', aiHelper: 'ai_star2',
+  whatIMissed: 'ai_star1', messageMenu: 'menu', gazeta: 'channel', saved: 'savedmessages', search: 'search',
+  themes: 'brush', night: 'darkmode', settings: 'settings', plumaSettings: 'settings_filled'
+};
+
 export function openCommandPalette() {
   const panel = document.createElement('div');
   panel.className = 'pg-panel';
   panel.setAttribute('role', 'dialog');
 
+  const searchBar = document.createElement('label');
+  searchBar.className = 'pg-palette-search';
   const input = document.createElement('input');
   input.className = 'pg-palette-input';
   input.placeholder = pt('Найти действие…', 'Find an action…');
   input.setAttribute('aria-label', input.placeholder);
+  searchBar.append(IconElement('search'), input);
 
   const list = document.createElement('div');
   list.className = 'pg-list';
   list.setAttribute('role', 'listbox');
 
-  panel.append(input, list);
+  panel.append(searchBar, list);
   createOverlay(panel);
 
   let filtered: PaletteAction[] = [];
@@ -422,6 +438,13 @@ export function openCommandPalette() {
     closeOverlay();
     rememberRecent(action.id);
     action.run();
+  };
+
+  const setActive = (idx: number) => {
+    if(active === idx) return;
+    list.children[active]?.classList.remove('is-active');
+    active = idx;
+    list.children[active]?.classList.add('is-active');
   };
 
   const render = () => {
@@ -452,6 +475,9 @@ export function openCommandPalette() {
       const title = document.createElement('span');
       title.className = 'pg-item-title';
       title.textContent = action.title();
+      title.dir = 'auto';
+      const icon = ACTION_ICONS[action.id];
+      if(icon) item.append(IconElement(icon, 'pg-item-icon'));
       item.append(title);
 
       if(action.onMessage) {
@@ -471,14 +497,12 @@ export function openCommandPalette() {
       if(action.hotkey) {
         const kbd = document.createElement('kbd');
         kbd.textContent = action.hotkey;
+        kbd.dir = 'ltr'; // * a key combination reads left to right in any language
         item.append(kbd);
       }
 
-      item.addEventListener('mousemove', () => {
-        if(active === idx) return;
-        active = idx;
-        render();
-      });
+      // * the pointer moves the highlight only: the list is not drawn again under it
+      item.addEventListener('mousemove', () => setActive(idx));
       item.addEventListener('click', () => run(action));
       return item;
     }));
@@ -499,8 +523,7 @@ export function openCommandPalette() {
     if(e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       if(!filtered.length) return;
-      active = (active + (e.key === 'ArrowDown' ? 1 : -1) + filtered.length) % filtered.length;
-      render();
+      setActive((active + (e.key === 'ArrowDown' ? 1 : -1) + filtered.length) % filtered.length);
       list.children[active]?.scrollIntoView({block: 'nearest'});
     } else if(e.key === 'Enter') {
       e.preventDefault();
@@ -538,8 +561,10 @@ function openHotkeysList() {
       const title = document.createElement('span');
       title.className = 'pg-item-title';
       title.textContent = text;
+      title.dir = 'auto';
       const kbd = document.createElement('kbd');
       kbd.textContent = keys;
+      kbd.dir = 'ltr'; // * a key combination reads left to right in any language
       item.append(title, kbd);
       list.append(item);
     });
@@ -573,98 +598,37 @@ export function openPlumaSettings() {
 
   const title = makeTitle('PlumaGram');
 
-  const makeRow = (key: 'noPeek' | 'noPeekBars' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate', text: string, sub: string, toggle: () => void) => {
-    const row = document.createElement('div');
-    row.className = 'pg-settings-row';
-    row.setAttribute('role', 'switch');
-    row.tabIndex = 0;
-
-    const texts = document.createElement('div');
-    texts.className = 'pg-settings-row-text';
-    const main = document.createElement('div');
-    main.textContent = text;
-    const secondary = document.createElement('div');
-    secondary.className = 'pg-settings-row-sub';
-    secondary.textContent = sub;
-    texts.append(main, secondary);
-
-    const sw = document.createElement('div');
-    sw.className = 'pg-switch';
-
-    const update = () => {
-      const on = plumaSettings()[key];
-      sw.classList.toggle('is-on', on);
-      row.setAttribute('aria-checked', String(on));
-    };
-    update();
-
-    const onToggle = () => {
-      toggle();
-      update();
-    };
-    row.addEventListener('click', onToggle);
-    row.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onToggle();
-      }
-    });
-
-    row.append(texts, sw);
-    return row;
-  };
-
-  const filtersRow = document.createElement('div');
-  filtersRow.className = 'pg-settings-row';
-  filtersRow.tabIndex = 0;
-  filtersRow.setAttribute('role', 'button');
-  filtersRow.textContent = pt('Фильтры сообщений…', 'Message filters…');
-  filtersRow.addEventListener('click', () => openFiltersManager(openPlumaSettings));
-
-  const themesRow = document.createElement('div');
-  themesRow.className = 'pg-settings-row';
-  themesRow.tabIndex = 0;
-  themesRow.setAttribute('role', 'button');
-  themesRow.textContent = pt('Тема как в приложении…', 'Theme as in the app…');
-  themesRow.addEventListener('click', () => openThemePicker(openPlumaSettings));
+  const makeRow = (key: 'noPeek' | 'noPeekBars' | 'noAds' | 'hideChannelReactions' | 'transcribeAccurate', icon: Icon, text: string, sub: string, toggle: () => void, isEnabled?: () => boolean) =>
+    makeSwitchRow(text, sub, () => plumaSettings()[key], toggle, {icon, isEnabled});
 
   const transferRow = document.createElement('div');
-  transferRow.className = 'pg-settings-row';
+  transferRow.className = 'pg-settings-row pg-settings-buttons';
   const saveButton = document.createElement('button');
   saveButton.className = 'pg-storage-tag';
-  saveButton.textContent = pt('Сохранить настройки в файл', 'Save settings to a file');
+  saveButton.append(IconElement('download'), pt('Сохранить в файл', 'Save to a file'));
   saveButton.addEventListener('click', exportSettings);
   const loadButton = document.createElement('button');
   loadButton.className = 'pg-storage-tag';
-  loadButton.textContent = pt('Загрузить из файла', 'Load from a file');
+  loadButton.append(IconElement('upload'), pt('Загрузить из файла', 'Load from a file'));
   loadButton.addEventListener('click', importSettings);
   transferRow.append(saveButton, loadButton);
 
-  const menuRow = document.createElement('div');
-  menuRow.className = 'pg-settings-row';
-  menuRow.tabIndex = 0;
-  menuRow.setAttribute('role', 'button');
-  menuRow.textContent = pt('Меню сообщения…', 'Message menu…');
-  menuRow.addEventListener('click', () => openMessageMenuEditor(openPlumaSettings));
-
-  const hotkeysRow = document.createElement('div');
-  hotkeysRow.className = 'pg-settings-row';
-  hotkeysRow.tabIndex = 0;
-  hotkeysRow.setAttribute('role', 'button');
-  hotkeysRow.textContent = pt('Горячие клавиши…', 'Keyboard shortcuts…');
-  hotkeysRow.addEventListener('click', openHotkeysList);
-
   panel.append(
     title,
-    makeRow('noPeek', pt('Не подглядывай!', 'No peeking!'), pt('Размывать список чатов и сообщения, открывать при наведении', 'Blur the chat list and messages, reveal on hover'), toggleNoPeek),
-    makeRow('noPeekBars', pt('…чёрными полосами вместо размытия', '…as black bars instead of the blur'), pt('Как в секретных документах. Быстрее на слабом компьютере', 'Like a declassified document. Faster on a weak computer'), () => togglePlumaSetting('noPeekBars')),
-    makeRow('noAds', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
-    makeRow('hideChannelReactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
-    makeRow('transcribeAccurate', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
-    themesRow,
-    filtersRow,
-    menuRow,
-    hotkeysRow,
+    makeCaption(pt('Приватность', 'Privacy')),
+    makeRow('noPeek', 'hide', pt('Не подглядывай!', 'No peeking!'), pt('Размывать список чатов и сообщения, открывать при наведении', 'Blur the chat list and messages, reveal on hover'), toggleNoPeek),
+    makeRow('noPeekBars', 'lock', pt('…чёрными полосами вместо размытия', '…as black bars instead of the blur'), pt('Как в секретных документах. Быстрее на слабом компьютере', 'Like a declassified document. Faster on a weak computer'), () => togglePlumaSetting('noPeekBars'), () => plumaSettings().noPeek),
+    makeCaption(pt('Каналы', 'Channels')),
+    makeRow('noAds', 'ads', pt('Без рекламы', 'No ads'), pt('Не показывать рекламные сообщения в каналах и ботах', 'Hide sponsored messages in channels and bots'), toggleNoAds),
+    makeRow('hideChannelReactions', 'reactions', pt('Скрыть реакции в каналах', 'Hide reactions in channels'), pt('Под постами каналов не будет реакций', 'No reactions under channel posts'), toggleChannelReactions),
+    makeCaption(pt('Голосовые', 'Voice')),
+    makeRow('transcribeAccurate', 'transcribe', pt('Точная расшифровка голосовых', 'Accurate voice transcription'), pt('Модель крупнее (≈ 250 МБ, один раз): медленнее, но лучше слышит русский. Голос никуда не уходит', 'A bigger model (≈ 250 MB, once): slower, but hears better. The voice never leaves this computer'), () => togglePlumaSetting('transcribeAccurate')),
+    makeCaption(pt('Вид и управление', 'Look and controls')),
+    makeLinkRow('brush', pt('Тема как в приложении…', 'Theme as in the app…'), () => openThemePicker(openPlumaSettings)),
+    makeLinkRow('menu', pt('Меню сообщения…', 'Message menu…'), () => openMessageMenuEditor(openPlumaSettings)),
+    makeLinkRow('filter', pt('Фильтры сообщений…', 'Message filters…'), () => openFiltersManager(openPlumaSettings)),
+    makeLinkRow('keyboard', pt('Горячие клавиши…', 'Keyboard shortcuts…'), openHotkeysList),
+    makeCaption(pt('Настройки PlumaGram', 'PlumaGram settings')),
     transferRow
   );
 
@@ -683,6 +647,9 @@ function onKeyDown(e: KeyboardEvent) {
   // * Esc closes our window wherever the focus is (otherwise it would close the chat under it)
   // * a field of ours that cancels itself on Esc (a folder's name being typed) keeps that Esc
   if(isOverlayOpen() && e.key === 'Escape' && (e.target as HTMLElement)?.dataset?.pgEscape === 'local') return;
+  // * a menu of the app opened over our window (a post's in «Газета») closes first, our window stays —
+  // * the app's back stack may have closed it with this very Esc already
+  if(isOverlayOpen() && e.key === 'Escape' && (e.defaultPrevented || contextMenuController.isOpened())) return;
   if(isOverlayOpen() && e.key === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
@@ -774,6 +741,8 @@ export default function initPlumaGram() {
   initFilters();
   initServiceFileLine();
   initThemes();
+  // * the copying of a shared folder goes on after a break (the page was closed meanwhile), once signed in
+  setTimeout(() => rootScope.myId && import('@/plumagram/storageShare').then(({resumeShares}) => resumeShares()), 20e3);
 
   createRoot(() => {
     createEffect(() => {

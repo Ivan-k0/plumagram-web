@@ -9,8 +9,13 @@
 import rootScope from '@lib/rootScope';
 import {bindManagersToSession} from '@lib/accounts/bindManagersToAccount';
 import {pt} from '@/plumagram/settings';
-import {createOverlay, focusSoon, makeTitle} from '@/plumagram/overlay';
-import type {Chat, Message} from '@layer';
+import {closeOverlay, createOverlay, focusSoon, makeSwitchRow, makeTitle} from '@/plumagram/overlay';
+import {toast} from '@components/toast';
+import {copyTextToClipboard} from '@helpers/clipboard';
+import createContextMenu from '@helpers/dom/createContextMenu';
+import Icon from '@components/icon';
+import wrapRichText from '@lib/richTextProcessor/wrapRichText';
+import type {Chat, Message, MessageEntity} from '@layer';
 import {getMiddleware, Middleware} from '@helpers/middleware';
 
 const PER_CHANNEL = 30, FOLD_LINES = 8;
@@ -76,21 +81,90 @@ function formatViews(views: number) {
   return '' + views;
 }
 
-async function photoUrl(message: Message.message): Promise<string> {
+/** The picture of a post, as wide as the feed — not the biggest one */
+function pickPhoto(message: Message.message) {
   const media = message.media as any;
   const photo = media?._ === 'messageMediaPhoto' ? media.photo : undefined;
   const document = media?._ === 'messageMediaDocument' ? media.document : undefined;
   const target = photo || document;
   const sizes = (photo?.sizes || document?.thumbs || []).filter((s: any) => s._ === 'photoSize' || s._ === 'photoSizeProgressive');
   if(!target || !sizes.length) return;
-  // * a picture as wide as the feed, not the biggest one
   const size = sizes.find((s: any) => s.w >= 600) || sizes[sizes.length - 1];
-  const {default: appDownloadManager} = await import('@lib/appDownloadManager');
-  const blob = await appDownloadManager.downloadMedia({media: target, thumb: size}) as Blob;
-  return URL.createObjectURL(blob);
+  return {target, size: size as {w: number, h: number}};
 }
 
-function renderPost(post: Post, showHeader: boolean, avatars: Map<string, HTMLElement>) {
+// * the feed's own picture URLs, revoked when it closes
+const photoUrls: string[] = [];
+
+async function photoUrl({target, size}: ReturnType<typeof pickPhoto>): Promise<string> {
+  const {default: appDownloadManager} = await import('@lib/appDownloadManager');
+  const blob = await appDownloadManager.downloadMedia({media: target, thumb: size as any}) as Blob;
+  const url = URL.createObjectURL(blob);
+  photoUrls.push(url);
+  return url;
+}
+
+/** The channel's own usernames, lower case */
+function channelUsernames(channel: Chat.channel) {
+  const names = [(channel as any).username, ...((channel as any).usernames || []).filter((u: any) => u.pFlags?.active).map((u: any) => u.username)];
+  return new Set(names.filter(Boolean).map((name: string) => name.toLowerCase()));
+}
+
+/** Which username a link or a mention leads to (t.me/name, name.t.me, tg://resolve?domain=name, @name) */
+function linkUsername(target: string) {
+  const t = target.trim();
+  if(t.startsWith('@')) return t.slice(1).toLowerCase();
+  try {
+    const url = new URL(t.includes('://') ? t : 'https://' + t);
+    const host = url.hostname.toLowerCase();
+    if(url.protocol === 'tg:') return url.searchParams.get('domain')?.toLowerCase();
+    if(['t.me', 'www.t.me', 'telegram.me', 'telegram.dog'].includes(host)) return url.pathname.split('/')[1]?.toLowerCase();
+    if(host.endsWith('.t.me')) return host.slice(0, -'.t.me'.length);
+  } catch(err) {}
+}
+
+/**
+ * The «Подписаться» line channels add under every post, left out — as the channel itself shows it in the app:
+ * only the last line, only when it is one link (with emoji or punctuation) and the link leads to this channel
+ */
+function withoutSubscribeLine(message: Message.message, channel: Chat.channel): {text: string, entities: MessageEntity[]} {
+  const text = message.message, entities = message.entities || [];
+  const keep = {text, entities};
+  let end = text.length;
+  while(end > 0 && /\s/.test(text[end - 1])) end--;
+  const lineStart = text.lastIndexOf('\n', end - 1) + 1;
+  if(lineStart <= 0) return keep; // the link is the whole post: kept
+
+  const usernames = channelUsernames(channel);
+  if(!usernames.size) return keep;
+  const covered = new Array(end - lineStart).fill(false);
+  let ownLink = false;
+  for(const entity of entities) {
+    const from = Math.max(entity.offset, lineStart), to = Math.min(entity.offset + entity.length, end);
+    if(from >= to) continue;
+    const target = entity._ === 'messageEntityTextUrl' ? entity.url :
+      entity._ === 'messageEntityUrl' || entity._ === 'messageEntityMention' ? text.slice(entity.offset, entity.offset + entity.length) :
+      undefined;
+    if(target === undefined) continue; // formatting is fine
+    if(!usernames.has(linkUsername(target))) return keep; // a link elsewhere: real content
+    ownLink = true;
+    for(let i = from; i < to; ++i) covered[i - lineStart] = true;
+  }
+  if(!ownLink) return keep;
+  for(let i = lineStart; i < end; ++i) {
+    if(!covered[i - lineStart] && /[\p{L}\p{N}]/u.test(text[i])) return keep;
+  }
+
+  let cut = lineStart;
+  while(cut > 0 && /\s/.test(text[cut - 1])) cut--;
+  if(!cut) return keep;
+  return {
+    text: text.slice(0, cut),
+    entities: entities.filter((entity) => entity.offset < cut).map((entity) => ({...entity, length: Math.min(entity.length, cut - entity.offset)}))
+  };
+}
+
+function renderPost(post: Post, showHeader: boolean, avatars: Map<string, HTMLElement>, folds: HTMLElement[], lazyTexts: HTMLElement[], middleware: Middleware) {
   const {message, channel} = post;
   const card = document.createElement('article');
   card.className = 'pg-gz-post' + (showHeader ? ' is-first' : '') + (post.unread ? ' is-unread' : '');
@@ -107,47 +181,45 @@ function renderPost(post: Post, showHeader: boolean, avatars: Map<string, HTMLEl
     const name = document.createElement('div');
     name.className = 'pg-gz-name';
     name.textContent = channel.title;
+    name.dir = 'auto';
     header.append(avatar, name);
     card.append(header);
   }
 
-  const media = message.media as any;
-  if(media && (media._ === 'messageMediaPhoto' || media.document?.thumbs?.length)) {
+  const photo = pickPhoto(message);
+  if(photo) {
     const picture = document.createElement('div');
     picture.className = 'pg-gz-photo';
-    const isVideo = media.document?.attributes?.some((a: any) => a._ === 'documentAttributeVideo');
-    if(isVideo) picture.classList.add('is-video');
+    const isVideo = (message.media as any).document?.attributes?.some((a: any) => a._ === 'documentAttributeVideo');
+    if(isVideo) picture.append(Icon('play_filled', 'pg-gz-play'));
+    // * its place is kept before it loads: the feed opened at the first unread post does not jump away from it
+    if(photo.size.w && photo.size.h) picture.style.setProperty('--pg-ratio', '' + photo.size.h / photo.size.w);
     card.append(picture);
-    photoUrl(message).then((url) => {
-      if(!url) return picture.remove();
+    photoUrl(photo).then((url) => {
       const img = document.createElement('img');
       img.src = url;
       img.alt = '';
+      img.decoding = 'async';
+      img.addEventListener('load', () => img.classList.add('is-loaded'), {once: true});
       picture.append(img);
     }, () => picture.remove());
   }
 
-  if(message.message) {
+  const shown = message.message ? withoutSubscribeLine(message, channel) : undefined;
+  if(shown?.text) {
     const text = document.createElement('div');
     text.className = 'pg-gz-text';
-    text.textContent = message.message;
+    // * with its formatting, links and custom emoji, as the app draws a message; custom emoji are drawn on a
+    // * canvas the size of the text — only for the posts one scrolls to, plain text until then
+    const draw = () => text.replaceChildren(wrapRichText(shown.text, {entities: shown.entities, middleware}));
+    if(shown.entities.some((entity) => entity._ === 'messageEntityCustomEmoji')) {
+      text.textContent = shown.text;
+      (text as any).pgDraw = draw;
+      lazyTexts.push(text);
+    } else draw();
+    text.dir = 'auto';
     card.append(text);
-    requestAnimationFrame(() => {
-      const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 20;
-      if(text.scrollHeight > lineHeight * (FOLD_LINES + 1)) {
-        text.classList.add('is-folded');
-        text.style.maxHeight = lineHeight * FOLD_LINES + 'px';
-        const more = document.createElement('button');
-        more.className = 'pg-gz-more';
-        more.textContent = pt('Показать полностью', 'Show in full');
-        more.addEventListener('click', () => {
-          text.classList.remove('is-folded');
-          text.style.maxHeight = '';
-          more.remove();
-        });
-        text.after(more);
-      }
-    });
+    folds.push(text);
   }
 
   const footer = document.createElement('div');
@@ -165,12 +237,115 @@ function renderPost(post: Post, showHeader: boolean, avatars: Map<string, HTMLEl
   meta.className = 'pg-gz-meta';
   const time = new Date(message.date * 1000);
   const sameDay = time.toDateString() === new Date().toDateString();
-  meta.textContent = (message.views ? '👁 ' + formatViews(message.views) + ' · ' : '') +
-    (sameDay ? '' : time.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ') +
+  if(message.views) {
+    const views = document.createElement('span');
+    views.className = 'pg-gz-views';
+    views.append(Icon('eye'), formatViews(message.views));
+    meta.append(views);
+  }
+  // * a date of its own direction: «2 мар. 09:14» is not reordered by a right-to-left line
+  const date = document.createElement('span');
+  date.dir = 'auto';
+  date.textContent = (sameDay ? '' : time.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ') +
     time.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  meta.append(date);
   footer.append(reactions, meta);
   card.append(footer);
   return card;
+}
+
+function postLink(post: Post) {
+  const username = (post.channel as any).username || (post.channel as any).usernames?.find((u: any) => u.pFlags?.active)?.username;
+  return username ? `https://t.me/${username}/${post.message.id}` : `https://t.me/c/${post.channel.id}/${post.message.id}`;
+}
+
+/** The menu of a post — the app's own context menu: show in the channel, copy, link, forward, hide the channel */
+function attachPostMenu(list: HTMLElement, overlay: HTMLElement, middleware: Middleware) {
+  const managers = bindManagersToSession(rootScope.managers);
+  let post: Post;
+  createContextMenu({
+    listenTo: list,
+    listenForClick: true,
+    middleware,
+    // * in our window, over it: the app's overlay root lies under our windows
+    appendTo: overlay,
+    // * a click on a link, «Показать полностью» or with text selected is not a call for the menu
+    findElement: (e) => {
+      const target = e.target as HTMLElement;
+      if(target.closest('a, button') || (e.type === 'click' && getSelection()?.toString())) return;
+      const card = target.closest<HTMLElement>('.pg-gz-post');
+      post = card && (card as any).pgPost;
+      return post && card;
+    },
+    buttons: [{
+      icon: 'message_jump',
+      regularText: pt('Показать в канале', 'Show in the channel'),
+      onClick: async() => {
+        const {channel, message} = post;
+        closeOverlay();
+        const {default: appImManager} = await import('@lib/appImManager');
+        appImManager.setPeer({peerId: channel.id.toPeerId(true), lastMsgId: message.id});
+      }
+    }, {
+      icon: 'copy',
+      regularText: pt('Копировать текст', 'Copy the text'),
+      verify: () => !!post.message.message,
+      onClick: () => {
+        copyTextToClipboard(post.message.message);
+        toast(pt('Текст скопирован', 'Text copied'));
+      }
+    }, {
+      icon: 'link',
+      regularText: pt('Скопировать ссылку', 'Copy the link'),
+      onClick: () => {
+        copyTextToClipboard(postLink(post));
+        toast(pt('Ссылка скопирована', 'Link copied'));
+      }
+    }, {
+      icon: 'forward',
+      regularText: pt('Переслать…', 'Forward…'),
+      onClick: async() => {
+        const peerId = post.channel.id.toPeerId(true), mid = post.message.id;
+        const {hotReloadGuard} = await import('@lib/solidjs/hotReloadGuardProvider');
+        await managers.appMessagesManager.reloadMessages(peerId, [mid]);
+        hotReloadGuard.showForwardPopup({[peerId]: [mid]});
+      }
+    }, {
+      icon: 'hide',
+      danger: true,
+      separator: true,
+      regularText: pt('Скрыть канал из Газеты', 'Hide the channel from Gazeta'),
+      onClick: () => {
+        const {channel} = post;
+        const settings = loadSettings();
+        if(!settings.hidden.includes('' + channel.id)) settings.hidden.push('' + channel.id);
+        saveSettings(settings);
+        toast(pt(`«${channel.title}» больше не в Газете`, `«${channel.title}» is out of Gazeta`));
+        // * its posts leave the feed at once, the rest stays where it was
+        list.querySelectorAll(`.pg-gz-post[data-channel="${channel.id}"]`).forEach((el) => el.remove());
+      }
+    }]
+  });
+}
+
+/** Long posts folded to FOLD_LINES with «Показать полностью»: every height read first, then every fold written */
+function foldLongPosts(texts: HTMLElement[]) {
+  if(!texts.length) return;
+  const lineHeight = parseFloat(getComputedStyle(texts[0]).lineHeight) || 20;
+  const long = texts.filter((text) => text.scrollHeight > lineHeight * (FOLD_LINES + 1));
+  long.forEach((text) => {
+    text.classList.add('is-folded');
+    text.style.maxHeight = lineHeight * FOLD_LINES + 'px';
+    const more = document.createElement('button');
+    more.className = 'pg-gz-more';
+    more.textContent = pt('Показать полностью', 'Show in full');
+    more.addEventListener('click', () => {
+      text.classList.remove('is-folded');
+      text.style.maxHeight = '';
+      more.remove();
+    });
+    text.after(more);
+  });
 }
 
 /** Real avatars of the channels, drawn after the feed is shown */
@@ -187,6 +362,19 @@ async function fillAvatars(avatars: Map<string, HTMLElement>, posts: Post[], mid
       holder.append(avatar.element as HTMLElement);
     } catch(err) {}
   }
+}
+
+/** The texts with custom emoji are drawn in full as they come near the view, once */
+function drawWhenNear(list: HTMLElement, texts: HTMLElement[]) {
+  const observer = new IntersectionObserver((entries) => {
+    for(const entry of entries) {
+      if(!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      (entry.target as any).pgDraw();
+    }
+  }, {root: list, rootMargin: '600px 0px'});
+  texts.forEach((text) => observer.observe(text));
+  return observer;
 }
 
 let markReadTimer: number;
@@ -231,7 +419,7 @@ export async function openGazeta() {
   const title = makeTitle(pt('Газета', 'Gazeta'));
   const settingsButton = document.createElement('button');
   settingsButton.className = 'pg-close';
-  settingsButton.textContent = '⚙';
+  settingsButton.append(Icon('settings'));
   settingsButton.setAttribute('aria-label', pt('Настройки Газеты', 'Gazeta settings'));
   settingsButton.addEventListener('click', () => openGazetaSettings());
   title.insertBefore(settingsButton, title.lastElementChild);
@@ -240,7 +428,7 @@ export async function openGazeta() {
   list.className = 'pg-gz-list';
   list.textContent = pt('Собираю посты каналов…', 'Gathering the channels\' posts…');
   panel.append(title, list);
-  createOverlay(panel);
+  const overlay = createOverlay(panel);
   focusSoon(panel);
 
   let posts: Post[];
@@ -257,12 +445,15 @@ export async function openGazeta() {
   }
 
   const avatars = new Map<string, HTMLElement>();
+  const middlewareHelper = getMiddleware();
   list.textContent = '';
   let firstUnread: HTMLElement;
+  const folds: HTMLElement[] = [], lazyTexts: HTMLElement[] = [];
   posts.forEach((post, idx) => {
     const previous = posts[idx - 1];
-    const card = renderPost(post, !previous || previous.channel.id !== post.channel.id, avatars);
+    const card = renderPost(post, !previous || previous.channel.id !== post.channel.id, avatars, folds, lazyTexts, middlewareHelper.get());
     (card as any).pgChannel = post.channel;
+    (card as any).pgPost = post;
     if(post.unread && !firstUnread) {
       firstUnread = card;
       const divider = document.createElement('div');
@@ -275,17 +466,22 @@ export async function openGazeta() {
 
   // * opened at the first unread post, or at the newest one when all are read
   requestAnimationFrame(() => {
+    foldLongPosts(folds);
     if(firstUnread) firstUnread.previousElementSibling?.scrollIntoView({block: 'start'});
     else list.scrollTop = list.scrollHeight;
   });
 
-  const middlewareHelper = getMiddleware();
   fillAvatars(avatars, posts, middlewareHelper.get());
+  attachPostMenu(list, overlay, middlewareHelper.get());
   const observer = watchRead(list, settings);
-  new MutationObserver(() => {
+  const drawObserver = drawWhenNear(list, lazyTexts);
+  new MutationObserver((_, self) => {
     if(!panel.isConnected) {
+      self.disconnect();
       observer.disconnect();
+      drawObserver.disconnect();
       middlewareHelper.destroy();
+      photoUrls.splice(0).forEach((url) => URL.revokeObjectURL(url));
     }
   }).observe(document.body, {childList: true});
 }
@@ -297,28 +493,10 @@ function openGazetaSettings() {
   panel.setAttribute('role', 'dialog');
   panel.tabIndex = -1;
 
-  const row = (key: 'markRead' | 'archived', text: string, sub: string) => {
-    const el = document.createElement('div');
-    el.className = 'pg-settings-row';
-    el.setAttribute('role', 'switch');
-    el.tabIndex = 0;
-    const texts = document.createElement('div');
-    texts.className = 'pg-settings-row-text';
-    texts.innerHTML = '<div></div><div class="pg-settings-row-sub"></div>';
-    texts.firstElementChild.textContent = text;
-    texts.lastElementChild.textContent = sub;
-    const sw = document.createElement('div');
-    sw.className = 'pg-switch';
-    const paint = () => sw.classList.toggle('is-on', settings[key]);
-    paint();
-    el.addEventListener('click', () => {
-      settings[key] = !settings[key];
-      saveSettings(settings);
-      paint();
-    });
-    el.append(texts, sw);
-    return el;
-  };
+  const row = (key: 'markRead' | 'archived', text: string, sub: string) => makeSwitchRow(text, sub, () => settings[key], () => {
+    settings[key] = !settings[key];
+    saveSettings(settings);
+  }, {icon: key === 'markRead' ? 'readchats' : 'archive'});
 
   panel.append(
     makeTitle(pt('Настройки Газеты', 'Gazeta settings'), true, () => openGazeta()),

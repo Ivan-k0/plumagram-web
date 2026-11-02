@@ -8,17 +8,19 @@ import I18n from '@lib/langPack';
 import type {ButtonMenuItemOptionsVerifiable} from '@components/buttonMenu';
 import {pt} from '@/plumagram/settings';
 import {createOverlay, focusSoon, makeTitle} from '@/plumagram/overlay';
+import Icon from '@components/icon';
+import liteMode from '@helpers/liteMode';
 
 const STORAGE_KEY = 'plumagram:message-menu';
 
-type MenuSettings = {order: string[], hidden: string[], seen: {[id: string]: string}};
+type MenuSettings = {order: string[], hidden: string[], seen: {[id: string]: string}, icons: {[id: string]: string}};
 
 function load(): MenuSettings {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    return {order: raw.order || [], hidden: raw.hidden || [], seen: raw.seen || {}};
+    return {order: raw.order || [], hidden: raw.hidden || [], seen: raw.seen || {}, icons: raw.icons || {}};
   } catch(err) {
-    return {order: [], hidden: [], seen: {}};
+    return {order: [], hidden: [], seen: {}, icons: {}};
   }
 }
 
@@ -86,6 +88,11 @@ export function arrangeMessageMenu<T extends ButtonMenuItemOptionsVerifiable>(bu
       settings.seen[id] = label;
       changed = true;
     }
+    // * and its icon: the editor shows the items as the menu does
+    if(button.icon && settings.icons[id] !== button.icon) {
+      settings.icons[id] = button.icon;
+      changed = true;
+    }
   }
   if(changed) save(settings);
 
@@ -102,7 +109,10 @@ export function arrangeMessageMenu<T extends ButtonMenuItemOptionsVerifiable>(bu
 /** The editor: every item met in menus, a switch to show it and arrows to move it */
 export function openMessageMenuEditor(onBack?: () => void) {
   const settings = load();
-  OWN_ITEMS.forEach((item) => settings.seen[item.id] ??= item.label());
+  OWN_ITEMS.forEach((item) => {
+    settings.seen[item.id] ??= item.label();
+    settings.icons[item.id] ??= item.icon;
+  });
 
   const ids = Object.keys(settings.seen);
   const ordered = [...settings.order.filter((id) => ids.includes(id)), ...ids.filter((id) => !settings.order.includes(id))];
@@ -123,20 +133,27 @@ export function openMessageMenuEditor(onBack?: () => void) {
   list.className = 'pg-list';
 
   const render = () => {
+    // * a row that moved slides from where it was (FLIP), with full animations only: a reorder is movement
+    const before = new Map<string, number>();
+    if(liteMode.isAvailable('motion')) {
+      list.querySelectorAll<HTMLElement>('.pg-menu-row').forEach((row) => before.set(row.dataset.id, row.getBoundingClientRect().top));
+    }
+
     list.replaceChildren(...ordered.map((id, idx) => {
       const row = document.createElement('div');
-      row.className = 'pg-item pg-menu-row';
+      row.className = 'pg-item pg-menu-row' + (id.startsWith('pg:') ? ' is-own' : '');
+      row.dataset.id = id;
 
       // * a tick of our own: the app hides the browser's checkboxes everywhere
       const box = document.createElement('button');
       box.className = 'pg-check';
       box.setAttribute('role', 'checkbox');
       box.setAttribute('aria-label', settings.seen[id]);
+      box.append(Icon('check'));
       const paint = () => {
         const on = !settings.hidden.includes(id);
         box.classList.toggle('is-on', on);
         box.setAttribute('aria-checked', String(on));
-        box.textContent = on ? '✓' : '';
         row.classList.toggle('is-off', !on);
       };
       box.addEventListener('click', () => {
@@ -145,9 +162,13 @@ export function openMessageMenuEditor(onBack?: () => void) {
         paint();
       });
 
+      // * the item as the menu shows it: its icon (ours in the accent colour) and its words
+      const icon = settings.icons[id] ? Icon(settings.icons[id] as Icon, 'pg-menu-row-icon') : document.createElement('span');
+      icon.classList.add('pg-menu-row-icon');
       const label = document.createElement('span');
       label.className = 'pg-item-title';
-      label.textContent = settings.seen[id] + (id.startsWith('pg:') ? ' ✦' : '');
+      label.textContent = settings.seen[id];
+      label.dir = 'auto';
 
       const move = (delta: number) => () => {
         const to = idx + delta;
@@ -156,23 +177,41 @@ export function openMessageMenuEditor(onBack?: () => void) {
         settings.order = [...ordered];
         save(settings);
         render();
-        (list.children[to]?.querySelector(delta < 0 ? '.pg-up' : '.pg-down') as HTMLElement)?.focus();
+        // * the focus stays on the moved row's arrow; at the end of the list on the other one
+        const moved = list.children[to];
+        const same = moved?.querySelector<HTMLButtonElement>(delta < 0 ? '.pg-up' : '.pg-down');
+        (same && !same.disabled ? same : moved?.querySelector<HTMLElement>(delta < 0 ? '.pg-down' : '.pg-up'))?.focus();
       };
-      const up = document.createElement('button');
-      up.className = 'pg-arrow pg-up';
-      up.textContent = '↑';
-      up.setAttribute('aria-label', pt('Выше', 'Up'));
-      up.addEventListener('click', move(-1));
-      const down = document.createElement('button');
-      down.className = 'pg-arrow pg-down';
-      down.textContent = '↓';
-      down.setAttribute('aria-label', pt('Ниже', 'Down'));
-      down.addEventListener('click', move(1));
+      const arrow = (className: string, iconName: Icon, text: string, delta: number) => {
+        const button = document.createElement('button');
+        button.className = 'pg-arrow ' + className;
+        button.append(Icon(iconName));
+        button.setAttribute('aria-label', text);
+        button.disabled = idx + delta < 0 || idx + delta >= ordered.length;
+        button.addEventListener('click', move(delta));
+        return button;
+      };
 
-      row.append(box, label, up, down);
+      row.append(box, icon, label, arrow('pg-up', 'up', pt('Выше', 'Up'), -1), arrow('pg-down', 'down', pt('Ниже', 'Down'), 1));
       paint();
       return row;
     }));
+
+    if(!before.size) return;
+    const moved: HTMLElement[] = [];
+    list.querySelectorAll<HTMLElement>('.pg-menu-row').forEach((row) => {
+      const was = before.get(row.dataset.id);
+      const shift = was === undefined ? 0 : was - row.getBoundingClientRect().top;
+      if(!shift) return;
+      row.style.transform = `translateY(${shift}px)`;
+      moved.push(row);
+    });
+    // * two frames: the rows are drawn where they were first, then go to their places
+    requestAnimationFrame(() => requestAnimationFrame(() => moved.forEach((row) => {
+      row.classList.add('is-moving');
+      row.style.transform = '';
+      row.addEventListener('transitionend', () => row.classList.remove('is-moving'), {once: true});
+    })));
   };
   render();
 

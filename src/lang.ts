@@ -4308,6 +4308,8 @@ const lang = {
   'InviteLink.ContextGetQRCode': 'Get QR Code',
   'InviteLink.QRCode.Title': 'Invite by QR Code',
   'InviteLink.QRCode.InfoGroupCall': 'Everyone on Telegram can scan this code to join your group call.',
+  'InviteLink.QRCode.Info': 'Everyone on Telegram can scan this code to join your group.',
+  'InviteLink.QRCode.InfoChannel': 'Everyone on Telegram can scan this code to join your channel.',
   'Alert.UserDoesntExists': 'Sorry, this user doesn\'t seem to exist.',
   'Alert.Confirm.Discard': 'Discard',
   'Appearance.Reset': 'Reset to Defaults',

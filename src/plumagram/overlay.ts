@@ -5,6 +5,7 @@
 import appNavigationController, {NavigationItem} from '@components/appNavigationController';
 import Icon from '@components/icon';
 import overlayCounter from '@helpers/overlayCounter';
+import liteMode from '@helpers/liteMode';
 
 let openOverlay: HTMLElement;
 let overlayNavigationItem: NavigationItem;
@@ -13,13 +14,25 @@ export function isOverlayOpen() {
   return !!openOverlay;
 }
 
+/** A closed window fades out where it stands (at once with animations off), no longer taking clicks or keys */
+function leave(overlay: HTMLElement) {
+  if(!overlay) return;
+  if(!liteMode.isAvailable('animations')) {
+    overlay.remove();
+    return;
+  }
+  overlay.classList.add('is-closing');
+  overlay.inert = true;
+  setTimeout(() => overlay.remove(), 150);
+}
+
 export function closeOverlay() {
   if(openOverlay) {
     (document.activeElement as HTMLElement)?.blur?.();
     // * a tick later: the Enter that chose an item is still on its way up to the app's «type anywhere»
     setTimeout(() => overlayCounter.isOverlayActive = false, 0);
   }
-  openOverlay?.remove();
+  leave(openOverlay);
   openOverlay = undefined;
   if(overlayNavigationItem) {
     const item = overlayNavigationItem;
@@ -36,29 +49,6 @@ function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLEleme
   const margin = 16;
   const vw = window.innerWidth, vh = window.innerHeight;
 
-  // * a screen of its own (Хранилище): exactly where the chat is, no dimming — the chat list stays usable to see
-  if(screen) {
-    overlay.classList.add('is-screen');
-    // * right of the chat list, as tall as it (the chat column itself runs under the list in the floating layout)
-    const fit = () => {
-      const list = document.getElementById('column-left')?.getBoundingClientRect();
-      const gap = 16;
-      const left = list && list.width < window.innerWidth * .6 ? list.right + gap : gap;
-      const top = list ? list.top : gap;
-      const height = list ? list.height : window.innerHeight - 2 * gap;
-      Object.assign(overlay.style, {left: left + 'px', top: top + 'px', width: (window.innerWidth - left - gap) + 'px', height: height + 'px'});
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    new MutationObserver((_, observer) => {
-      if(!overlay.isConnected) {
-        window.removeEventListener('resize', fit);
-        observer.disconnect();
-      }
-    }).observe(document.body, {childList: true});
-    return;
-  }
-
   if(anchor?.isConnected) {
     overlay.classList.add('is-anchored');
     const rect = anchor.getBoundingClientRect();
@@ -73,12 +63,45 @@ function placePanel(overlay: HTMLElement, panel: HTMLElement, anchor?: HTMLEleme
     return;
   }
 
-  const column = document.getElementById('column-center');
-  const rect = column?.getBoundingClientRect();
-  if(rect && rect.width >= 360) {
-    overlay.style.paddingLeft = Math.max(margin, rect.left) + 'px';
-    overlay.style.paddingRight = Math.max(margin, vw - rect.right) + 'px';
-  }
+  // * a screen of its own (Хранилище): exactly where the chat is, no dimming — the chat list stays usable to see;
+  // * a window: in the middle of the room beside the list. Either follows the window and the list as they change
+  if(screen) overlay.classList.add('is-screen');
+  const fit = () => {
+    const {left, right, top, height} = besideChatList();
+    if(screen) Object.assign(overlay.style, {left: left + 'px', top: top + 'px', width: (window.innerWidth - left - right) + 'px', height: height + 'px'});
+    else Object.assign(overlay.style, {paddingLeft: left + 'px', paddingRight: right + 'px'});
+  };
+  fit();
+  const list = document.getElementById('column-left');
+  const resizeObserver = new ResizeObserver(fit);
+  list && resizeObserver.observe(list);
+  window.addEventListener('resize', fit);
+  // * the list changes sides with the direction (a language switched while the window is open)
+  const directionObserver = new MutationObserver(fit);
+  directionObserver.observe(document.documentElement, {attributeFilter: ['dir']});
+  new MutationObserver((_, observer) => {
+    if(!overlay.isConnected) {
+      window.removeEventListener('resize', fit);
+      resizeObserver.disconnect();
+      directionObserver.disconnect();
+      observer.disconnect();
+    }
+  }).observe(document.body, {childList: true});
+}
+
+/**
+ * The room beside the chat list (physical left and right insets, the list's top and height): the chat column
+ * itself runs under the list in the floating layout, and sits on the left of it right to left
+ */
+function besideChatList() {
+  const gap = 16, vw = window.innerWidth;
+  const list = document.getElementById('column-left')?.getBoundingClientRect();
+  const inset = {left: gap, right: gap, top: list ? list.top : gap, height: list ? list.height : window.innerHeight - 2 * gap};
+  // * a list as wide as the window (a narrow one) is covered, not avoided
+  if(!list || !list.width || list.width >= vw * .6) return inset;
+  if(list.left + list.width / 2 < vw / 2) inset.left = list.right + gap;
+  else inset.right = vw - list.left + gap;
+  return inset;
 }
 
 /** `onBack`: this window was opened from another one — Esc, «back» and the arrow return there */
@@ -98,7 +121,8 @@ export function createOverlay(panel: HTMLElement, anchor?: HTMLElement, onBack?:
       target.click();
       return;
     }
-    if(e.key === 'Escape') {
+    // * an Esc a menu inside our window has already taken (it closed itself) is not ours
+    if(e.key === 'Escape' && !e.defaultPrevented) {
       e.preventDefault();
       e.stopPropagation();
       closeOverlay();
@@ -173,6 +197,8 @@ export function makeTitle(text: string, closable = true, onBack?: () => void) {
   const label = document.createElement('span');
   label.className = 'pg-title-text';
   label.textContent = text;
+  // * a name in its own direction (a folder, «#тег»): «#тег» is not turned into «тег#» right to left
+  label.dir = 'auto';
   title.append(label);
   if(closable) {
     const close = document.createElement('button');
@@ -185,9 +211,108 @@ export function makeTitle(text: string, closable = true, onBack?: () => void) {
   return title;
 }
 
+/**
+ * A settings row with the app's own switch (Material: the track fills, the knob grows and slides along the line):
+ * a click, Enter or Space on the row flips it. `isOn` is read again after every `toggle`
+ */
+export function makeSwitchRow(text: string, sub: string, isOn: () => boolean, toggle: () => void, options: {
+  icon?: Icon,
+  /** a switch that only means something with another one on (black bars — with «Не подглядывай!») */
+  isEnabled?: () => boolean
+} = {}) {
+  const row = document.createElement('div');
+  row.className = 'pg-settings-row';
+  row.setAttribute('role', 'switch');
+  row.tabIndex = 0;
+  if(options.icon) row.append(Icon(options.icon, 'pg-settings-row-icon'));
+
+  const texts = document.createElement('div');
+  texts.className = 'pg-settings-row-text';
+  // * the words in their own direction: «…» and «!» stay where they belong in a line of the other direction
+  const main = document.createElement('div');
+  main.textContent = text;
+  main.dir = 'auto';
+  const secondary = document.createElement('div');
+  secondary.className = 'pg-settings-row-sub';
+  secondary.textContent = sub;
+  secondary.dir = 'auto';
+  texts.append(main, secondary);
+
+  // * the app's toggle is drawn from a checkbox's state; this one only shows the row's
+  const toggleField = document.createElement('div');
+  toggleField.className = 'checkbox-field checkbox-field-toggle';
+  toggleField.setAttribute('aria-hidden', 'true');
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.tabIndex = -1;
+  input.className = 'checkbox-field-input';
+  const track = document.createElement('div');
+  track.className = 'checkbox-toggle';
+  const knob = document.createElement('div');
+  knob.className = 'checkbox-toggle-circle';
+  track.append(knob);
+  toggleField.append(input, track);
+
+  const update = () => {
+    const on = isOn();
+    input.checked = on;
+    row.setAttribute('aria-checked', String(on));
+    const enabled = options.isEnabled ? options.isEnabled() : true;
+    row.classList.toggle('is-disabled', !enabled);
+    row.setAttribute('aria-disabled', String(!enabled));
+  };
+  update();
+  // * the other rows of the window follow a change (a switch that depends on this one)
+  const onChanged = () => row.isConnected ? update() : window.removeEventListener('pg-settings-changed', onChanged);
+  window.addEventListener('pg-settings-changed', onChanged);
+
+  const onToggle = () => {
+    if(row.classList.contains('is-disabled')) return;
+    toggle();
+    update();
+    window.dispatchEvent(new Event('pg-settings-changed'));
+  };
+  row.addEventListener('click', onToggle);
+  row.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onToggle();
+    }
+  });
+
+  row.append(texts, toggleField);
+  return row;
+}
+
+/** A row that opens another window: an icon, the words, a chevron along the line */
+export function makeLinkRow(icon: Icon, text: string, onClick: () => void) {
+  const row = document.createElement('div');
+  row.className = 'pg-settings-row is-link';
+  row.tabIndex = 0;
+  row.setAttribute('role', 'button');
+  const label = document.createElement('span');
+  label.className = 'pg-settings-row-text';
+  label.textContent = text;
+  label.dir = 'auto';
+  row.append(Icon(icon, 'pg-settings-row-icon'), label, Icon('next', 'pg-settings-row-chevron'));
+  row.addEventListener('click', onClick);
+  return row;
+}
+
+/** A group's name over its rows, as Material settings lists have */
+export function makeCaption(text: string) {
+  const caption = document.createElement('div');
+  caption.className = 'pg-settings-caption';
+  caption.textContent = text;
+  return caption;
+}
+
 export type ChoiceOption = {
   text: string,
-  run: () => void
+  run: () => void,
+  /** the app's icon before the words, as a Material menu item has */
+  icon?: Icon,
+  danger?: boolean
 };
 
 /** A window with a title and a list to pick one from: mouse, arrows and Enter */
@@ -203,14 +328,16 @@ export function openChoicePicker(titleText: string, options: ChoiceOption[], anc
   const list = document.createElement('div');
   list.className = 'pg-list';
 
-  options.forEach(({text, run}) => {
+  options.forEach(({text, run, icon, danger}) => {
     const item = document.createElement('div');
-    item.className = 'pg-item';
+    item.className = 'pg-item' + (danger ? ' is-danger' : '');
+    if(icon) item.append(Icon(icon, 'pg-item-icon'));
     item.tabIndex = 0;
     item.setAttribute('role', 'button');
     const label = document.createElement('span');
     label.className = 'pg-item-title';
     label.textContent = text;
+    label.dir = 'auto';
     item.append(label);
 
     const choose = () => {

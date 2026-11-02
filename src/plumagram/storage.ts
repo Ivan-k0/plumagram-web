@@ -234,8 +234,10 @@ async function openFolder(folder: CloudFolder) {
     label.className = 'pg-item-title';
     const text = (message.message || '').replace(/\s+/g, ' ').trim();
     label.textContent = text ? (text.length > 70 ? text.slice(0, 70) + '…' : text) : describeMedia(message);
+    label.dir = 'auto';
     const date = document.createElement('span');
     date.className = 'pg-item-target';
+    date.dir = 'auto';
     date.textContent = new Date(message.date * 1000).toLocaleDateString();
     item.append(label, date);
     item.addEventListener('click', async() => {
